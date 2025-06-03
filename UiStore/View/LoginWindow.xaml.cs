@@ -4,8 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using UiStore.Common;
-using UiStore.Models;
+using UiStore.Services;
 using UiStore.ViewModels;
 
 namespace UiStore.View
@@ -15,10 +14,11 @@ namespace UiStore.View
     /// </summary>
     public partial class LoginWindow : Window
     {
-        private LoginWindow(Dictionary<string, string> accs)
+
+        internal LoginWindow(LoginViewModel loginViewModel)
         {
             InitializeComponent();
-            DataContext = new LoginViewModel(accs);
+            DataContext = loginViewModel;
             IdBox.Focus();
         }
 
@@ -36,15 +36,6 @@ namespace UiStore.View
             {
                 PasswordBox.Focus();
             }
-        }
-
-        internal static bool IsPassword(Dictionary<string, string> accs)
-        {
-            if(new LoginWindow(accs).ShowDialog() == true)
-            {
-                return true;
-            }
-            return false;
         }
 
         private void PasswordBox_KeyDown(object sender, KeyEventArgs e)

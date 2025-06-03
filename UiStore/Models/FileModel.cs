@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace UiStore.Model
+namespace UiStore.Models
 {
     internal class FileModel
     {

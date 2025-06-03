@@ -9,11 +9,18 @@ namespace UiStore.Common
     public static class ConstKey
     {
         public static readonly string ZIP_PASSWORD = Util.GetMD5HashFromString("@RaspberryPi5@");
-        public static class AppState
+        public static class DoStatus
         {
-            public static readonly int UPDATE_STATE = 1;
-            public static readonly int CREATE_STATE = 2;
-            public static readonly int STANDBY_STATE = 0;
+            public const int DO_NOTHING = 0;
+            public const int CHECK_UPDATE_STATE = 1;
+            public const int CREATE_STATE = 2;
+        }
+        public static class AppStatus
+        {
+            public const int STANDBY = 0;
+            public const int HAS_NEW_VERSION = 1;
+            public const int DELETED = 2;
+            public const int UPDATE_FAILED = 3;
         }
     }
 }

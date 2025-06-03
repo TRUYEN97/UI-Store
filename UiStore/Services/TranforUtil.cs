@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using UiStore.Model;
+using UiStore.Common;
+using UiStore.Models;
 
-namespace UiStore.Common
+namespace UiStore.Services
 {
     internal class TranforUtil
     {
@@ -19,13 +20,13 @@ namespace UiStore.Common
             {
                 if (!await sftp.Connect())
                 {
-                    string errorStr = "Mất kết nối với server!";
+                    string errorStr = "Connect to server failded!";
                     throw new Exception(errorStr);
                 }
 
                 if (!await sftp.Exists(path))
                 {
-                    string errorStr = $"Trạm test này chưa được cài đặt chương trình!";
+                    string errorStr = $"Station invalid!";
                     throw new Exception(errorStr);
                 }
 
@@ -37,8 +38,7 @@ namespace UiStore.Common
                 }
                 catch (Exception ex)
                 {
-                    string errorStr = $"File appConfig.json tại: {path} có thể bị lỗi format.\r\nHãy kiểm tra thủ công để tránh mất dữ liệu!";
-                    throw new Exception(errorStr, ex);
+                    throw new Exception(path, ex);
                 }
             }
         }

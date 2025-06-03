@@ -9,7 +9,7 @@ namespace UiStore.Configs
     public class AutoDLConfig
     {
         private static readonly Lazy<AutoDLConfig> _instance = new Lazy<AutoDLConfig>(() => new AutoDLConfig());
-        public static string CfPath { get; } = "./AutoDL_Conig.json";
+        public static string CfPath { get; } = "./config.json";
         private ConfigModel _configModel;
         private AutoDLConfig() {
             if (!Init(CfPath))

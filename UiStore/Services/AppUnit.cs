@@ -1,157 +1,230 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using UiStore.Common;
 using UiStore.Configs;
-using UiStore.Model;
 using UiStore.Models;
-using UiStore.View;
+using UiStore.ViewModel;
 
 namespace UiStore.Services
 {
 
-    internal class AppUnit
+    internal class AppUnit : IDisposable
     {
         private readonly AppUpdater _updater;
-        private AppModel appModel;
-
-        private string _programFolderPath;
-        public string ProgramFolderPath { get => _programFolderPath; set { _updater.ProgramFolderPath = value; _programFolderPath = value; } }
-        public string CommonFolderPath { get => _updater.CommonFolderPath; set { _updater.CommonFolderPath = value; } }
-
-        private bool _isRunning;
-        public bool IsRunning { get => _isRunning; private set { _isRunning = value; OnStatusChanged?.Invoke(); } }
-
-        private int _status;
-        public int Status { get => _status; set { _status = value; OnStatusChanged?.Invoke(); } }
-
-        private string _name;
-        public string Name { get => _name; set { _name = value; _updater.Name = value; } }
-        public string AppModelPath { get; set; }
-        public string Version { get; internal set; }
-        public string LocalPath { get; internal set; }
-
-        public Action RemoveAppAction { get; internal set; }
-        public Action AddAppAction { get; internal set; }
-        public Action OnStatusChanged { get; internal set; }
-        public Predicate<Dictionary<string, string>> IsCanOpen { get; set; }
-
-        public event Action<string> OnLog;
-        public event Action<int> OnProgress;
-        public event Action<string> OnIconFileChanged;
+        private readonly AppViewModel _appView;
+        private readonly Logger _logger;
+        private readonly ProgramManagement _programManagement;
+        private readonly Authentication authentication;
+        private readonly MyTimer _AutoOpentimer;
+        private readonly MyTimer _AutoDisabletimer;
         private CancellationTokenSource _cts;
+        private int _doStatus;
+        private int _appStatus;
+        private bool _isRunning;
+        private readonly object _lock;
 
-        internal AppUnit(CacheManager cache)
+        internal AppUnit(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, AppViewModel app, Logger logger)
         {
-            _updater = new AppUpdater(cache);
-            IsRunning = false;
+            _updater = new AppUpdater(cache, this, logger);
+            _programManagement = programManagement;
+            authentication = new Authentication(logger);
+            AppInfoModel = new AppInfoModel(programPathModel);
+            _appView = app;
+            _logger = logger;
+            _lock = new object();
+            _AutoOpentimer = new MyTimer((a) =>
+            {
+                if (IsRunanble())
+                {
+                    LaunchApp();
+                }
+            });
+            _AutoDisabletimer = new MyTimer((a) =>
+            {
+                if (!IsRunning)
+                {
+                    _programManagement.DisableApp(app);
+                }
+            });
         }
 
-        internal void Init()
+        public AppInfoModel AppInfoModel { get; private set; }
+        public AppModel AppModel { get; private set; }
+
+        public bool IsRunning
         {
-            _updater.OnLog += msg => OnLog?.Invoke(msg);
-            _updater.OnProgress += p => OnProgress?.Invoke(p);
-            _updater.OnStatus += st => Status = st;
+            get => _isRunning;
+            set
+            {
+                _isRunning = value;
+                _appView.RunningStatus(value);
+            }
+        }
+        public int DoStatus
+        {
+            get => _doStatus;
+            set
+            {
+                _doStatus = value;
+                _appView.DoStatus(DoStatus);
+            }
+        }
+
+        public int AppStatus { get => _appStatus; internal set { _appStatus = value; this._appView.AppStatus(value); } }
+
+        public void SetProgress(int progress)
+        {
+            this._appView.Progress = progress;
+        }
+
+        internal void CloseApp()
+        {
+            if (IsRunning)
+            {
+                //string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.CloseCmd}";
+                //Util.RunCmd(cmd);
+            }
         }
 
         public void LaunchApp()
         {
             try
             {
-                if (appModel == null || IsRunning || Status != ConstKey.AppState.STANDBY_STATE) return;
-                Dictionary<string, string> accounts = AutoDLConfig.ConfigModel.Accounts;
-                if (IsCanOpen?.Invoke(accounts) != true)
+                lock (_lock)
                 {
-                    return;
-                }
-                Task.Run(async () =>
-                {
-                    try
+                    if (string.IsNullOrWhiteSpace(AppInfoModel?.AppPath) || AppModel == null || !IsRunanble()) return;
+                    Task.Run(async () =>
                     {
-                        IsRunning = true;
-                        if (await _updater.CreateProgram(appModel))
+                        authentication.AccessUserListModelPath = AppInfoModel?.AccectUserPath;
+                        if (await authentication.Login() && IsRunanble())
                         {
-                            string cmd = $"cd \"{ProgramFolderPath}\" && {appModel.OpenCmd}";
-                            Util.RunCmd(cmd);
+                            try
+                            {
+
+                                IsRunning = true;
+                                if (await _updater.CreateProgram(AppModel))
+                                {
+                                    string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.OpenCmd}";
+                                    Util.RunCmd(cmd);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.AddLogLine(($"[{AppInfoModel.Name}]: {ex.Message}"));
+                            }
+                            finally
+                            {
+                                IsRunning = false;
+                                if (AppModel?.CloseAndClear == true)
+                                {
+                                    try
+                                    {
+                                        Directory.Delete(AppInfoModel.ProgramFolderPath, true);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                                    }
+                                }
+                            }
                         }
-                    }
-                    catch (Exception ex)
-                    {
-                        OnLog?.Invoke($"[{Name}] Lỗi mở app: {ex.Message}");
-                    }
-                    finally
-                    {
-                        Directory.Delete(ProgramFolderPath, true);
-                        IsRunning = false;
-                    }
-                });
+                    });
+                }
             }
             catch (Exception ex)
             {
-                OnLog?.Invoke($"[{Name}] Lỗi mở app: {ex.Message}");
+                _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
             }
         }
 
         internal void StartUpdate()
         {
-            _cts?.Cancel();
+            if (_cts != null && _cts.Token.IsCancellationRequested) return;
             _cts = new CancellationTokenSource();
-
             Task.Run(async () =>
             {
-                while (!_cts.Token.IsCancellationRequested)
+                try
                 {
-                    try
+                    while (!_cts.Token.IsCancellationRequested)
                     {
-                        if (IsRunning)
+                        try
                         {
-                            continue;
-                        }
-                        if (AppModelPath == null)
-                        {
-                            StopUpdate();
-                            RemoveAppAction?.Invoke();
-                        }
-                        appModel = await TranforUtil.GetModelConfig<AppModel>(AppModelPath, ConstKey.ZIP_PASSWORD);
-                        if (appModel == null)
-                        {
-                            StopUpdate();
-                            RemoveAppAction?.Invoke();
-                            OnLog?.Invoke($"Lỗi[{Name}]: Không lấy được thông tin từ server!!");
-                        }
-                        else if (appModel.Enable && appModel.FileModels?.Count > 0 && Status == ConstKey.AppState.STANDBY_STATE)
-                        {
-                            AddAppAction?.Invoke();
-                            if (!string.IsNullOrEmpty(appModel.MainPath))
+                            if (AppInfoModel?.AppPath == null)
                             {
-                                var iconFile = appModel.FileModels.FirstOrDefault(f => Util.ArePathsEqual(f.ProgramPath, appModel.MainPath));
-                                if (iconFile != null)
+                                StopUpdate();
+                            }
+                            AppModel = await TranforUtil.GetModelConfig<AppModel>(AppInfoModel?.AppPath, ConstKey.ZIP_PASSWORD);
+                            if (!AppModel.Enable || AppModel.FileModels == null || AppModel.FileModels.Count == 0)
+                            {
+                                _AutoDisabletimer.Start(0, 2000);
+                                AppStatus = ConstKey.AppStatus.DELETED;
+                            }
+                            else
+                            {
+                                _AutoDisabletimer.Stop();
+                                _appView.UpdateInfoForm();
+                                _programManagement.AddApp(_appView);
+                                await _updater.CheckUpdate(AppModel);
+                                await UpdateIcon();
+                                if (AppModel.AutoOpen)
                                 {
-                                    var rs = await _updater.CheckSumAppFiles(iconFile);
-                                    OnIconFileChanged?.Invoke(rs.Item2);
+                                    _AutoOpentimer.Start(0, 1000);
+                                }
+                                else
+                                {
+                                    _AutoOpentimer.Stop();
                                 }
                             }
-                            await _updater.UpdateAsync(appModel);
+                            await Task.Delay(TimeSpan.FromSeconds(AutoDLConfig.ConfigModel.UpdateTime), _cts.Token);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                            StopUpdate();
                         }
                     }
-                    catch (Exception ex)
+                }
+                finally
+                {
+                    _programManagement.RemoveApp(_appView);
+                }
+
+            }, _cts.Token);
+        }
+
+        private bool IsRunanble()
+        {
+            return !IsRunning && DoStatus == ConstKey.DoStatus.DO_NOTHING && AppStatus == ConstKey.AppStatus.STANDBY;
+        }
+
+        private async Task UpdateIcon()
+        {
+            if (!string.IsNullOrEmpty(AppModel.MainPath))
+            {
+                var iconFile = AppModel.FileModels.FirstOrDefault(f => Util.ArePathsEqual(f.ProgramPath, AppModel.MainPath));
+                if (iconFile != null)
+                {
+                    var rs = await _updater.IconAppHasChanged(iconFile);
+                    if (rs.Item1 || (_appView.IconSource == null && !string.IsNullOrEmpty(rs.Item2)))
                     {
-                        OnLog?.Invoke($"Lỗi[{Name}]:{ex.Message}");
-                    }
-                    finally
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(AutoDLConfig.ConfigModel.UpdateTime), _cts.Token);
+                        _appView.ExtractIconFromApp(rs.Item2);
                     }
                 }
-            }, _cts.Token);
+            }
         }
 
         internal void StopUpdate()
         {
             _cts?.Cancel();
+        }
+
+        public void Dispose()
+        {
+            _AutoOpentimer?.Dispose();
+            _AutoDisabletimer?.Dispose();
         }
     }
 }

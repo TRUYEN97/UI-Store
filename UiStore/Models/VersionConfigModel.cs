@@ -1,6 +1,6 @@
 ﻿
 
-namespace UiStore.Model
+namespace UiStore.Models
 {
     internal class VersionConfigModel : CommonConfigModel
     {

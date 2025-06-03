@@ -19,9 +19,9 @@ namespace UiStore.Common
                     {
                         zipInput.Password = zipPassword;
                     }
-                    ZipEntry entry = zipInput.GetNextEntry() ?? throw new InvalidOperationException("File ZIP rỗng.");
+                    ZipEntry entry = zipInput.GetNextEntry() ?? throw new InvalidOperationException("Zip file is empty.");
                     if (entry.IsDirectory)
-                        throw new InvalidOperationException("File đầu tiên trong ZIP là thư mục.");
+                        throw new InvalidOperationException("Zip file invalid.");
                     using (var outputStream = File.Create(localPath))
                     {
                         zipInput.CopyTo(outputStream);
@@ -62,7 +62,7 @@ namespace UiStore.Common
         public static void ExtractZipWithPassword(string zipFilePath, string extractDirectory, string password)
         {
             if (!File.Exists(zipFilePath))
-                throw new FileNotFoundException("Không tìm thấy file ZIP.", zipFilePath);
+                throw new FileNotFoundException("ZIP file not found.", zipFilePath);
 
             Directory.CreateDirectory(extractDirectory);
 
@@ -83,7 +83,7 @@ namespace UiStore.Common
 
                     // Chống path traversal
                     if (!fullPath.StartsWith(Path.GetFullPath(extractDirectory), StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("Đường dẫn không hợp lệ trong ZIP.");
+                        throw new InvalidOperationException("ZIP path invalid.");
 
                     if (entry.IsDirectory)
                     {
@@ -178,7 +178,7 @@ namespace UiStore.Common
                     {
                         if (entry.IsDirectory)
                         {
-                            throw new Exception($"Zip file invailed: {targetPath}");
+                            throw new Exception($"Zip file invalid: {targetPath}");
                         }
                         string dir = Path.GetDirectoryName(targetPath);
                         if (!string.IsNullOrWhiteSpace(dir))

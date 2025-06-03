@@ -1,18 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
-namespace UiStore.Model
+namespace UiStore.Models
 {
     internal class AppModel
     {
         public string OpenCmd { get; set; }
         public string CloseCmd { get; set; }
         public string MainPath { get; set; }
-        public string WindowTitle { get; set; }
-        public HashSet<FileModel> FileModels { get; set; } = new HashSet<FileModel>();
+        public string Version { get; set; }
+        public string FWSersion { get; set; }
+        public string FCDVersion { get; set; }
+        public string BOMVersion { get; set; }
+        public string FTUVersion { get; set; }
+        public string RemoteStoreDir { get; set; }
+        public string RemoteAppListPath { get; set; }
+
+        public string Path { get; set; }
         public bool Enable { get; set; }
         public bool AutoOpen { get; set; }
-        public string LocalPath { get; internal set; }
-        public string Version { get; internal set; }
+        public bool AutoUpdate { get; set; }
+        public bool AutoRemove { get; set; }
+        public bool CloseAndClear { get; set; }
+
+        public HashSet<FileModel> FileModels { get; set; } = new HashSet<FileModel>();
     }
 }

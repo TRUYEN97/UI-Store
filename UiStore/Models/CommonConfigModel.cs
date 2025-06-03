@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace UiStore.Model
+namespace UiStore.Models
 {
     internal class CommonConfigModel
     {

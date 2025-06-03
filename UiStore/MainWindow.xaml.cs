@@ -23,17 +23,9 @@ namespace UiStore
             Util.RunCmd($"attrib +h +s \"{AutoDLConfig.ConfigModel.AppLocalPath}\"");
             Util.RunCmd($"attrib +h +s \"{AutoDLConfig.ConfigModel.CommonLocalPath}\"");
             Util.RunCmd($"attrib +h +s \"{AutoDLConfig.CfPath}\"");
-            if (PasswordWindow.IsPassword(AutoDLConfig.ConfigModel.LaunchPassword))
-            {
-                InitializeComponent();
-                InitMainViewMode();
-                InitTimer();
-            }
-            else
-            {
-                ExitApplication();
-                return;
-            }
+            InitializeComponent();
+            InitMainViewMode();
+            InitTimer();
         }
 
         private void InitMainViewMode()
@@ -72,21 +64,21 @@ namespace UiStore
 
         private void CreateNotifyIcon()
         {
-            if (_notifyIcon != null) 
+            if (_notifyIcon != null)
             {
                 return;
             }
-            _notifyIcon = new NotifyIcon();
-            _notifyIcon.Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath);
-            _notifyIcon.Visible = true;
-            _notifyIcon.Text = "Ui Store";
-
+            _notifyIcon = new NotifyIcon()
+            {
+                Icon = System.Drawing.Icon.ExtractAssociatedIcon(System.Windows.Forms.Application.ExecutablePath),
+                Visible = true,
+                Text = "Ui Store"
+            };
             _notifyIcon.DoubleClick += (s, args) => ShowWindow();
 
-            // Menu chuột phải
             var contextMenu = new ContextMenuStrip();
-            contextMenu.Items.Add("Mở lại").Click += (s, e) => ShowWindow();
-            contextMenu.Items.Add("Thoát").Click += (s, e) => ExitApplication();
+            contextMenu.Items.Add("Show").Click += (s, e) => ShowWindow();
+            contextMenu.Items.Add("Exit").Click += (s, e) => ExitApplication();
             _notifyIcon.ContextMenuStrip = contextMenu;
         }
 

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -14,72 +13,41 @@ namespace UiStore.ViewModel
 {
     internal class MainViewModel : BaseViewModel
     {
-        public ObservableCollection<AppViewModel> Applications { get; } = new ObservableCollection<AppViewModel>();
-        public ObservableCollection<string> LogLines { get; } = new ObservableCollection<string>();
         public ObservableCollection<string> Ips { get; } = new ObservableCollection<string>();
 
-        private readonly CacheManager _cache;
         private readonly Location _location;
+        private readonly Logger _logger;
+        private readonly Authentication _authentication;
+        private readonly ProgramManagement _programManagement;
+        private readonly MyTimer _timer;
         private CancellationTokenSource _cts;
         private readonly object _lock = new object();
 
         public MainViewModel(CacheManager cache)
         {
-            _cache = cache;
             _location = AutoDLConfig.ConfigModel.Location;
             PcName = PcInfo.PcName;
             Product = _location.Product;
             Station = _location.Station;
+            _logger = new Logger();
+            _programManagement = new ProgramManagement(cache, this._logger);
+            _authentication = new Authentication(this._logger, PathUtil.GetStationAccessUserPath(_location));
             Title = $"{ProgramInfo.ProductName} - V{ProgramInfo.ProductVersion}";
+            _timer = new MyTimer((_) =>
+            {
+                UpdateIpsSafe();
+            });
         }
-
+        public ObservableCollection<AppViewModel> Applications => _programManagement.Applications;
+        public ObservableCollection<string> LogLines => _logger.LogLines;
         public string PcName { get; private set; }
         public string Title { get; private set; }
         public string Product { get; private set; }
         public string Station { get; private set; }
 
-        public void AddLogLine(string message)
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                LogLines.Add($"{DateTime.Now:HH:mm:ss} -> {message}");
-                while (LogLines.Count > 15)
-                {
-                    LogLines.RemoveAt(0);
-                }
-            });
-        }
-
-        public void RemoveApp(AppViewModel appViewModel)
-        {
-            DispatcherHelper.RunOnUI(() => Applications.Remove(appViewModel));
-        }
-
-        private bool IsContainApp(AppViewModel appViewModel)
-        {
-            foreach (var app in Applications)
-            {
-                if (app == appViewModel || app.AppModelPath == appViewModel?.AppModelPath)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        public void AddApp(AppViewModel appViewModel)
-        {
-            DispatcherHelper.RunOnUI(() =>
-            {
-                if (!IsContainApp(appViewModel))
-                {
-                    Applications.Add(appViewModel);
-                }
-            });
-        }
-
         public void Start()
         {
+            _timer?.Start(0, 3000);
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
             _ = Task.Run(() => LoopAsync(_cts.Token));
@@ -87,7 +55,8 @@ namespace UiStore.ViewModel
 
         public void Stop()
         {
-            _cts?.Cancel();
+            _cts?.Cancel(); 
+            _timer?.Stop();
         }
 
         private async Task LoopAsync(CancellationToken token)
@@ -97,14 +66,17 @@ namespace UiStore.ViewModel
             {
                 try
                 {
-                    UpdateIpsSafe();
-                    await SyncConfigAsync();
-                    await Task.Delay(TimeSpan.FromSeconds(updateTime), token);
+                    if (_authentication.IsAuthenticated || await _authentication.Login(true))
+                    {
+                        await SyncConfigAsync();
+                        await Task.Delay(TimeSpan.FromSeconds(updateTime), token);
+                    }
+                    else { Application.Current.Shutdown(); }
                 }
                 catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
-                    AddLogLine($"Lỗi: {ex.Message}");
+                    _logger.AddLogLine(ex.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }
@@ -130,46 +102,8 @@ namespace UiStore.ViewModel
                 var newConfigs = appList.ProgramPaths.ToDictionary(elem => Util.GetAppName(_location, elem.Key), elm => elm.Value);
                 lock (_lock)
                 {
-                    RemoveAppsNotExists(newConfigs);
-                    UpdateApps(newConfigs);
+                    _programManagement.UpdateApps(newConfigs);
                 }
-            }
-        }
-
-        private void UpdateApps(Dictionary<string, string> newConfigs)
-        {
-            var existingApps = Applications.ToDictionary(a => a.Name, a => a);
-            foreach (var config in newConfigs)
-            {
-                if (!existingApps.TryGetValue(config.Key, out var appVm))
-                {
-                    string name = config.Key;
-                    appVm = new AppViewModel(_cache)
-                    {
-                        Name = name,
-                        ProgramFolderPath = $"{AutoDLConfig.ConfigModel.AppLocalPath}/{name}",
-                        CommonFolderPath = $"{AutoDLConfig.ConfigModel.CommonLocalPath}",
-                        AppModelPath = config.Value
-                    };
-                    appVm.Init(AddLogLine, AddApp, RemoveApp);
-                    appVm.StartUpdate();
-                }
-                else if (appVm.AppModelPath != config.Value)
-                {
-                    appVm.StopUpdate();
-                    appVm.AppModelPath = config.Value;
-                    appVm.StartUpdate();
-                }
-            }
-        }
-
-        private void RemoveAppsNotExists(Dictionary<string, string> newConfigs)
-        {
-            var toRemove = Applications.Where(a => !newConfigs.ContainsKey(a.Name)).ToList();
-            foreach (var app in toRemove)
-            {
-                app.StopUpdate();
-                RemoveApp(app);
             }
         }
     }

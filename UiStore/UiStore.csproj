@@ -111,10 +111,15 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Behaviors\MouseDoubleClickBehavior.cs" />
+    <Compile Include="Models\AppInfoModel.cs" />
+    <Compile Include="Services\Authentication.cs" />
     <Compile Include="Common\ConstKey.cs" />
     <Compile Include="Common\ProgramInfo.cs" />
     <Compile Include="Common\SafeDispatcherProperty.cs" />
-    <Compile Include="Common\TranforUtil.cs" />
+    <Compile Include="Services\Logger.cs" />
+    <Compile Include="Services\MyTimer.cs" />
+    <Compile Include="Services\ProgramManagement.cs" />
+    <Compile Include="Services\TranforUtil.cs" />
     <Compile Include="Common\PathUtil.cs" />
     <Compile Include="Common\PcInfo.cs" />
     <Compile Include="Common\Location.cs" />
@@ -124,8 +129,11 @@
     <Compile Include="Configs\AutoDLConfig.cs" />
     <Compile Include="Configs\ConfigModel.cs" />
     <Compile Include="Configs\SftpConfig.cs" />
+    <Compile Include="Models\AccessUserListModel.cs" />
     <Compile Include="Models\AccountModel.cs" />
     <Compile Include="Models\AppList.cs" />
+    <Compile Include="Models\ProgramPathModel.cs" />
+    <Compile Include="Models\UserModel.cs" />
     <Compile Include="Services\AppUnit.cs" />
     <Compile Include="ViewModels\AppViewModel.cs" />
     <Compile Include="Services\AppUpdater.cs" />

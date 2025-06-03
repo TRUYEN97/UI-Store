@@ -8,12 +8,15 @@ using UiStore.Common;
 using System.Collections.Generic;
 using System.IO;
 using System;
+using UiStore.Models;
+using Microsoft.Extensions.Logging;
 
 namespace UiStore.ViewModels
 {
     internal class LoginViewModel : BaseViewModel
     {
-        private readonly Dictionary<string, string> accs;
+        private readonly Logger logger;
+        public HashSet<UserModel> UserModels {  get; set; }
         private static readonly string logPath = "loginLog.txt";
 
         private string _password;
@@ -32,45 +35,65 @@ namespace UiStore.ViewModels
 
         public ICommand LoginCommand { get; }
 
-        public LoginViewModel(Dictionary<string, string> accs)
+        public LoginViewModel(HashSet<UserModel> users, Logger logger) : this(logger)
         {
-            this.accs = accs;
+            this.UserModels = users;
+            Id = null;
+            Password = null;
+        }
+
+        public LoginViewModel(Logger logger)
+        {
+            this.logger = logger;
             LoginCommand = new RelayCommand(ExecuteLogin);
         }
 
-        private bool IsAccount(Dictionary<string, string> accountModel)
+        private bool IsAccount(HashSet<UserModel> accountModel)
         {
             if (accountModel == null)
             {
                 return true;
             }
-            if (accountModel.TryGetValue(this.Id, out var passsword))
+            foreach (var userModel in accountModel)
             {
-                string pwMd5 = Util.GetMD5HashFromString(Password?.Trim());
-                return pwMd5 == passsword;
+                if (userModel?.Id == this.Id)
+                {
+                    string pwMd5 = Util.GetMD5HashFromString(this.Password?.Trim());
+                    return pwMd5 == userModel?.Password;
+                }
             }
             return false;
         }
 
         private void ExecuteLogin(object obj)
         {
-            if (accs == null || accs.Count == 0)
-            {
-                return;
-            }
-            if (IsAccount(accs))
+            if (UserModels == null || UserModels.Count == 0)
             {
                 var wd = Application.Current.Windows
-               .OfType<Window>()
-               .FirstOrDefault(w => w is LoginWindow);
+                .OfType<Window>()
+                .FirstOrDefault(w => w is LoginWindow);
                 if (wd != null)
                 {
-                    AddLoginLog();
                     wd.DialogResult = true;
                     return;
                 }
             }
-            MessageBox.Show("Sai mật khẩu!");
+            else
+            {
+                if (IsAccount(UserModels))
+                {
+                    var wd = Application.Current.Windows
+                   .OfType<Window>()
+                   .FirstOrDefault(w => w is LoginWindow);
+                    if (wd != null)
+                    {
+                        AddLoginLog();
+                        wd.DialogResult = true;
+                        return;
+                    }
+                }
+                MessageBox.Show("Sai mật khẩu!");
+            }
         }
 
         private void AddLoginLog()
@@ -82,7 +105,8 @@ namespace UiStore.ViewModels
                     Directory.CreateDirectory(Path.GetDirectoryName(logPath));
                 }
             }
-            File.AppendAllText(logPath, $"[{DateTime.Now:yyyy/MM/dd HH:mm:ss}]  login: {Id}\r\n");
+            this.logger?.AddLogLine($"User [{Id}] login");
+            File.AppendAllText(logPath, $"[{DateTime.Now:yyyy/MM/dd HH:mm:ss}]  login: [{Id}]\r\n");
         }
     }
 }

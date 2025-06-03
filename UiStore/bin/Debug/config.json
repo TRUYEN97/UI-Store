@@ -1,5 +1,4 @@
 {
-  "LaunchPassword": "4d4c26fe23dfe2fc5720e016463b2dd4",
   "SftpConfig": {
     "Host": "127.0.0.1",
     "Port": 4422,
@@ -16,8 +15,5 @@
   "RemotePath": "/AutoDownload-store",
   "AppLocalPath": "./Apps",
   "CommonLocalPath": "./Common",
-  "UpdateTime": 20,
-  "Accounts": {
-    "V3233228": "4a1bbf31043b651332aac9d43d0695ee"
-  }
+  "UpdateTime": 5
 }

@@ -21,15 +21,12 @@ namespace UiStore.Configs
                 Product = "UTPG3TM0T01",
                 Station = "FT6"
             };
-            LaunchPassword = Util.GetMD5HashFromString("Foxconn168!!");
             RemotePath = "/AutoDownload";
             AppLocalPath = "./Apps";
             CommonLocalPath = "./Common";
             CleaningApp = true;
             UpdateTime = 20;
-            Accounts.Add("V3233228", Util.GetMD5HashFromString("Foxconn123!!"));
         }
-        public string LaunchPassword { get; set; }
         public SftpConfig SftpConfig { get;  set; }
 
         public Location Location { get; set; }
@@ -41,6 +38,5 @@ namespace UiStore.Configs
         public string AppLocalPath { get;  set; }
         public string CommonLocalPath { get;  set; }
         public int UpdateTime { get; set; }
-        public Dictionary<string, string> Accounts { get; private set; } = new Dictionary<string, string>();
     }
 }

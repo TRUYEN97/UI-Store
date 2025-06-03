@@ -1,17 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Newtonsoft.Json.Linq;
 using UiStore.Common;
-using UiStore.Configs;
 using UiStore.Models;
 using UiStore.Services;
 using UiStore.View;
@@ -21,77 +15,47 @@ using Brushes = System.Windows.Media.Brushes;
 
 namespace UiStore.ViewModel
 {
-    internal class AppViewModel : BaseViewModel
+    internal class AppViewModel : BaseViewModel, IDisposable
     {
         private static readonly Brush RunningBrush = Brushes.LightGreen;
         private static readonly Brush UpdatingBrush = Brushes.LightYellow;
         private static readonly Brush StandbyBrush = Brushes.LightBlue;
         private static readonly Brush CreatingBrush = Brushes.LightSkyBlue;
-        private readonly AppUnit _unit;
-
+        private static readonly Brush HasNewVersionBrush = Brushes.Orange;
+        private static readonly Brush DeletedBrush = Brushes.Brown;
+        private static readonly Brush UpdateFailedBrush = Brushes.Red;
+        private static readonly Brush TransparentBrush = Brushes.Transparent;
+        private readonly AppUnit _appUnit;
         public ICommand LaunchCommand { get; }
+        public ICommand CloseCommand { get; }
         public ICommand ShowInfoCommand { get; }
 
-        public AppViewModel(CacheManager cache)
+        public AppViewModel(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, Logger logger)
         {
-            _unit = new AppUnit(cache);
-            _backgroundColor = CreateSafeProperty(nameof(BackgroundColor),StandbyBrush);
-            _backgroundStateColor = CreateSafeProperty(nameof(BackgroundStateColor),StandbyBrush);
+            _appUnit = new AppUnit(cache, programManagement, programPathModel, this, logger);
+            _backgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
+            _statusBackgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
+            _runningBackgroundColor = CreateSafeProperty(nameof(RunningBackgroundColor), StandbyBrush);
             _iconSource = CreateSafeProperty<ImageSource>(nameof(IconSource));
-            LaunchCommand = new RelayCommand( _ => _unit.LaunchApp());
-            ShowInfoCommand = new RelayCommand( _ => ShowInfo());
+            LaunchCommand = new RelayCommand(_ => _appUnit.LaunchApp());
+            CloseCommand = new RelayCommand(_ => _appUnit.CloseApp());
+            ShowInfoCommand = new RelayCommand(_ => ShowInfo());
         }
 
-        public void Init(Action<string> logAction, Action<AppViewModel> addAppAction, Action<AppViewModel> removeAppAction)
+        public void StartUpdate() => _appUnit.StartUpdate();
+        public void StopUpdate() => _appUnit.StopUpdate();
+
+        public string Name => _appUnit?.AppInfoModel?.Name;
+        public string FWVersion => _appUnit?.AppModel?.FWSersion;
+        public string FCDVersion => _appUnit?.AppModel?.FCDVersion;
+        public string BOMVersion => _appUnit?.AppModel?.BOMVersion;
+        public string FTUVersion => _appUnit?.AppModel?.FTUVersion;
+        public string Version => _appUnit?.AppModel?.Version;
+
+        public AppInfoModel AppInfoModel
         {
-            _unit.AddAppAction = () =>
-            {
-                addAppAction?.Invoke(this);
-            };
-            _unit.RemoveAppAction = () =>
-            {
-                removeAppAction?.Invoke(this);
-            };
-            _unit.OnLog += logAction;
-            _unit.OnProgress += p => Progress = p;
-            _unit.OnIconFileChanged += ExtractIconFromApp;
-            _unit.OnStatusChanged += OnStatusChanged;
-            _unit.IsCanOpen += IsCanOpen;
-            _unit.Init();
+            get => SafeGet(() => _appUnit.AppInfoModel);
         }
-        public void StartUpdate() => _unit.StartUpdate();
-        public void StopUpdate() => _unit.StopUpdate();
-        public bool Isrunning => _unit.IsRunning;
-
-        public string ProgramFolderPath
-        {
-            get => SafeGet(() => _unit.ProgramFolderPath);
-            set => SafeSet(() => _unit.ProgramFolderPath = value);
-        }
-        
-        public string CommonFolderPath
-        {
-            get => SafeGet(() => _unit.CommonFolderPath);
-            set => SafeSet(() => _unit.CommonFolderPath = value);
-        }
-
-        public string Name
-        {
-            get => SafeGet(() => _unit.Name);
-            set => SafeSet(() => _unit.Name = value);
-        }
-
-        public string AppModelPath
-        {
-            get => SafeGet(() => _unit.AppModelPath);
-            set => SafeSet(() => _unit.AppModelPath = value);
-        }
-
-        public string Version => _unit.Version;
-
-        public string LocalPath => _unit.LocalPath;
-
-
 
         private readonly SafeDispatcherProperty<ImageSource> _iconSource;
         public ImageSource IconSource
@@ -99,19 +63,34 @@ namespace UiStore.ViewModel
             get => _iconSource.Value;
             set => _iconSource.Value = value;
         }
+        public void UpdateInfoForm()
+        {
+            OnPropertyChanged(nameof(Name));
+            OnPropertyChanged(nameof(FWVersion));
+            OnPropertyChanged(nameof(FCDVersion));
+            OnPropertyChanged(nameof(BOMVersion));
+            OnPropertyChanged(nameof(FTUVersion));
+            OnPropertyChanged(nameof(Version));
+        }
 
         private readonly SafeDispatcherProperty<Brush> _backgroundColor;
-        private readonly SafeDispatcherProperty<Brush> _backgroundStateColor;
+        private readonly SafeDispatcherProperty<Brush> _statusBackgroundColor;
+        private readonly SafeDispatcherProperty<Brush> _runningBackgroundColor;
 
         public Brush BackgroundColor
         {
             get => _backgroundColor.Value;
             set => _backgroundColor.Value = value;
         }
-        public Brush BackgroundStateColor
+        public Brush StatusBackgroundColor
         {
-            get => _backgroundStateColor.Value;
-            set => _backgroundStateColor.Value = value;
+            get => _statusBackgroundColor.Value;
+            set => _statusBackgroundColor.Value = value;
+        }
+        public Brush RunningBackgroundColor
+        {
+            get => _runningBackgroundColor.Value;
+            set => _runningBackgroundColor.Value = value;
         }
 
         private int _progress;
@@ -121,13 +100,13 @@ namespace UiStore.ViewModel
             set => SetProperty(ref _progress, value);
         }
 
+
+        private bool _isHovered;
         public bool IsHovered
         {
             get => _isHovered;
             set => SetProperty(ref _isHovered, value);
         }
-
-        private bool _isHovered;
 
         private void ShowInfo()
         {
@@ -138,44 +117,11 @@ namespace UiStore.ViewModel
             window.ShowDialog();
         }
 
-        private void OnStatusChanged()
-        {
-            if (_unit.IsRunning)
-            {
-                BackgroundColor = RunningBrush;
-            }
-            else
-            {
-                switch (_unit.Status)
-                {
-                    case 0:
-                        BackgroundColor = StandbyBrush;
-                        break;
-                    case 1:
-                        BackgroundColor = UpdatingBrush;
-                        break;
-                    case 2:
-                        BackgroundColor = CreatingBrush;
-                        break;
-                    default:
-                        BackgroundColor = StandbyBrush;
-                        break;
-                }
-            }
-        }
-
-        private bool IsCanOpen(Dictionary<string, string> accs)
-        {
-            return LoginWindow.IsPassword(accs);
-        }
-
-        private void ExtractIconFromApp(string path)
+        internal void ExtractIconFromApp(string path)
         {
             try
             {
-                
                 Icon icon;
-
                 if (path == null || !File.Exists(path))
                 {
                     icon = SystemIcons.Application;
@@ -199,6 +145,72 @@ namespace UiStore.ViewModel
             {
                 return;
             }
+        }
+        internal void RunningStatus(bool running)
+        {
+            DispatcherHelper.RunOnUI(() =>
+            {
+                if (running)
+                {
+                    RunningBackgroundColor = RunningBrush;
+                }
+                else
+                {
+                    RunningBackgroundColor = StandbyBrush;
+                }
+            });
+        }
+
+        internal void AppStatus(int status)
+        {
+            DispatcherHelper.RunOnUI(() =>
+            {
+                switch (status)
+                {
+                    case ConstKey.AppStatus.STANDBY:
+                        StatusBackgroundColor = TransparentBrush;
+                        break;
+                    case ConstKey.AppStatus.HAS_NEW_VERSION:
+                        StatusBackgroundColor = HasNewVersionBrush;
+                        break;
+                    case ConstKey.AppStatus.DELETED:
+                        StatusBackgroundColor = DeletedBrush;
+                        break;
+                    case ConstKey.AppStatus.UPDATE_FAILED:
+                        StatusBackgroundColor = UpdateFailedBrush;
+                        break;
+                    default:
+                        StatusBackgroundColor = TransparentBrush;
+                        break;
+                }
+            });
+        }
+
+        internal void DoStatus(int status)
+        {
+            DispatcherHelper.RunOnUI(() =>
+            {
+                switch (status)
+                {
+                    case ConstKey.DoStatus.DO_NOTHING:
+                        BackgroundColor = StandbyBrush;
+                        break;
+                    case ConstKey.DoStatus.CHECK_UPDATE_STATE:
+                        BackgroundColor = UpdatingBrush;
+                        break;
+                    case ConstKey.DoStatus.CREATE_STATE:
+                        BackgroundColor = CreatingBrush;
+                        break;
+                    default:
+                        BackgroundColor = StandbyBrush;
+                        break;
+                }
+            });
+        }
+
+        public void Dispose()
+        {
+            _appUnit.Dispose();
         }
     }
 
