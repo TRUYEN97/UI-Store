@@ -120,14 +120,11 @@ namespace UiStore.Services
                                 IsRunning = false;
                                 if (AppModel?.CloseAndClear == true)
                                 {
-                                    try
-                                    {
-                                        Directory.Delete(AppInfoModel.ProgramFolderPath, true);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
-                                    }
+                                    _programManagement.RemoveProgramFolder(AppInfoModel);
+                                }
+                                else
+                                {
+                                    _programManagement.RemoveProgram(_updater.FilesToRemove);
                                 }
                             }
                         }
@@ -144,6 +141,7 @@ namespace UiStore.Services
         {
             if (_cts != null && _cts.Token.IsCancellationRequested) return;
             _cts = new CancellationTokenSource();
+            _programManagement.RemoveAppIcon(AppInfoModel);
             Task.Run(async () =>
             {
                 try
@@ -164,11 +162,12 @@ namespace UiStore.Services
                             }
                             else
                             {
+                                AppStatus = ConstKey.AppStatus.STANDBY;
                                 _AutoDisabletimer.Stop();
                                 _appView.UpdateInfoForm();
                                 _programManagement.AddApp(_appView);
+                                InitStorePathFor(AppModel);
                                 await _updater.CheckUpdate(AppModel);
-                                await UpdateIcon();
                                 if (AppModel.AutoOpen)
                                 {
                                     _AutoOpentimer.Start(0, 1000);
@@ -189,31 +188,29 @@ namespace UiStore.Services
                 }
                 finally
                 {
-                    _programManagement.RemoveApp(_appView);
+                    _programManagement.RemoveApp(_appView, AppModel);
                 }
 
             }, _cts.Token);
         }
 
+        private void InitStorePathFor(AppModel appModel)
+        {
+            string rootFolderPath = AppInfoModel.ProgramFolderPath;
+            foreach (var file in appModel.FileModels)
+            {
+                string storeFile = file.ProgramPath;
+                if (!string.IsNullOrWhiteSpace(rootFolderPath))
+                {
+                    storeFile = Path.Combine(rootFolderPath, file.ProgramPath);
+                }
+                file.StorePath = storeFile;
+            }
+        }
+
         private bool IsRunanble()
         {
             return !IsRunning && DoStatus == ConstKey.DoStatus.DO_NOTHING && AppStatus == ConstKey.AppStatus.STANDBY;
-        }
-
-        private async Task UpdateIcon()
-        {
-            if (!string.IsNullOrEmpty(AppModel.MainPath))
-            {
-                var iconFile = AppModel.FileModels.FirstOrDefault(f => Util.ArePathsEqual(f.ProgramPath, AppModel.MainPath));
-                if (iconFile != null)
-                {
-                    var rs = await _updater.IconAppHasChanged(iconFile);
-                    if (rs.Item1 || (_appView.IconSource == null && !string.IsNullOrEmpty(rs.Item2)))
-                    {
-                        _appView.ExtractIconFromApp(rs.Item2);
-                    }
-                }
-            }
         }
 
         internal void StopUpdate()
@@ -225,6 +222,11 @@ namespace UiStore.Services
         {
             _AutoOpentimer?.Dispose();
             _AutoDisabletimer?.Dispose();
+        }
+
+        internal void ExtractIconFromApp(string iconPath)
+        {
+            _appView.ExtractIconFromApp(iconPath);
         }
     }
 }

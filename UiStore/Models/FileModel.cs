@@ -5,6 +5,7 @@ namespace UiStore.Models
     internal class FileModel
     {
         public string ProgramPath { get; set; }
+        public string StorePath { get; set; }
         public string RemotePath { get; set; }
         public string Md5 { get; set; }
 

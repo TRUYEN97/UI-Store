@@ -30,9 +30,7 @@ namespace UiStore
 
         private void InitMainViewMode()
         {
-            var cache = new CacheManager();
-            cache.LoadFromFolder(AutoDLConfig.ConfigModel.CommonLocalPath);
-            var _viewModel = new MainViewModel(cache);
+            var _viewModel = new MainViewModel();
             DataContext = _viewModel;
             Loaded += (_, o) =>
             {

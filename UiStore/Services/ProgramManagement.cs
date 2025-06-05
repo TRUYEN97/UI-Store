@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using UiStore.Common;
@@ -39,7 +40,7 @@ namespace UiStore.Services
             }
         }
 
-        public void RemoveApp(AppViewModel appViewModel)
+        public void RemoveApp(AppViewModel appViewModel, AppModel appModel)
         {
             DisableApp(appViewModel);
             if (_appBackgrounds.ContainsKey(appViewModel.Name))
@@ -47,6 +48,71 @@ namespace UiStore.Services
                 _appBackgrounds.Remove(appViewModel.Name);
                 appViewModel.Dispose();
                 _logger.AddLogLine($"Remove [{appViewModel?.AppInfoModel?.Name}]");
+                if (appModel?.CloseAndClear == true)
+                {
+                    RemoveProgramFolder(appViewModel.AppInfoModel);
+                }
+                _cache.TryRemove(appModel?.FileModels);
+            }
+        }
+
+        public void RemoveProgramFolder(AppInfoModel appInfoModel)
+        {
+            try
+            {
+                string dir = appInfoModel?.ProgramFolderPath;
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    if (Directory.Exists(dir))
+                    {
+                        Directory.Delete(dir, true);
+                    }
+                }
+                RemoveAppIcon(appInfoModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.AddLogLine($"[{appInfoModel.Name}]: {ex.Message}");
+            }
+        }
+
+        internal void RemoveAppIcon(AppInfoModel appInfoModel)
+        {
+            try
+            {
+                string dir = appInfoModel?.IconDir;
+                if (!string.IsNullOrEmpty(dir))
+                {
+                    if (Directory.Exists(dir))
+                    {
+                        Directory.Delete(dir, true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.AddLogLine($"[{appInfoModel.Name}]: {ex.Message}");
+            }
+        }
+
+        internal void RemoveProgram(HashSet<FileModel> filesToRemove)
+        {
+            if (filesToRemove != null)
+            {
+                try
+                {
+                    foreach (var fileModel in filesToRemove)
+                    {
+                        if (File.Exists(fileModel.StorePath))
+                        {
+                            File.Delete(fileModel.StorePath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.AddLogLine(ex.Message);
+                }
             }
         }
 
@@ -102,8 +168,8 @@ namespace UiStore.Services
                 {
                     appVm = new AppViewModel(_cache, this, config.Value, _logger);
                     appVm.AppInfoModel.Name = config.Key;
-                    appVm.AppInfoModel.ProgramFolderPath = $"{AutoDLConfig.ConfigModel.AppLocalPath}/{config.Key}";
-                    appVm.AppInfoModel.CommonFolderPath = $"{AutoDLConfig.ConfigModel.CommonLocalPath}";
+                    appVm.AppInfoModel.RootDir = AutoDLConfig.ConfigModel.AppLocalPath;
+                    appVm.AppInfoModel.CommonFolderPath = AutoDLConfig.ConfigModel.CommonLocalPath;
                     appVm.StartUpdate();
                     AddAppToBackGroud(appVm);
                 }

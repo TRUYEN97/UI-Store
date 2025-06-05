@@ -33,6 +33,10 @@ namespace UiStore.Services
                 try
                 {
                     string appConfig = await sftp.DownloadZipFileFormModel(path, zipPassword);
+                    if (string.IsNullOrEmpty(appConfig))
+                    {
+                        return default;
+                    }
                     var result = JsonConvert.DeserializeObject<T>(appConfig);
                     return result;
                 }

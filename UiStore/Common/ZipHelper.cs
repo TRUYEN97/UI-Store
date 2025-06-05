@@ -90,9 +90,15 @@ namespace UiStore.Common
                         Directory.CreateDirectory(fullPath);
                         continue;
                     }
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
-
+                    string dir = Path.GetDirectoryName(fullPath);
+                    if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
+                    {
+                        if (File.Exists(dir))
+                        {
+                            File.Delete(dir);
+                        }
+                        Directory.CreateDirectory(dir);
+                    }
                     using (var outputStream = File.Create(fullPath))
                     {
                         zipStream.CopyTo(outputStream);
@@ -181,8 +187,12 @@ namespace UiStore.Common
                             throw new Exception($"Zip file invalid: {targetPath}");
                         }
                         string dir = Path.GetDirectoryName(targetPath);
-                        if (!string.IsNullOrWhiteSpace(dir))
+                        if (!string.IsNullOrWhiteSpace(dir) && !Directory.Exists(dir))
                         {
+                            if (File.Exists(dir))
+                            {
+                                File.Delete(dir);
+                            }
                             Directory.CreateDirectory(dir);
                         }
                         using (var outputStream = File.Create(targetPath))

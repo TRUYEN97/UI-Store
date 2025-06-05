@@ -23,13 +23,15 @@ namespace UiStore.ViewModel
         private CancellationTokenSource _cts;
         private readonly object _lock = new object();
 
-        public MainViewModel(CacheManager cache)
+        public MainViewModel()
         {
             _location = AutoDLConfig.ConfigModel.Location;
             PcName = PcInfo.PcName;
             Product = _location.Product;
             Station = _location.Station;
             _logger = new Logger();
+            var cache = new CacheManager(_logger);
+            cache.LoadFromFolder(AutoDLConfig.ConfigModel.CommonLocalPath);
             _programManagement = new ProgramManagement(cache, this._logger);
             _authentication = new Authentication(this._logger, PathUtil.GetStationAccessUserPath(_location));
             Title = $"{ProgramInfo.ProductName} - V{ProgramInfo.ProductVersion}";
@@ -71,7 +73,13 @@ namespace UiStore.ViewModel
                         await SyncConfigAsync();
                         await Task.Delay(TimeSpan.FromSeconds(updateTime), token);
                     }
-                    else { Application.Current.Shutdown(); }
+                    else 
+                    {
+                        DispatcherHelper.RunOnUI(() =>
+                        {
+                            Application.Current.Shutdown();
+                        });
+                    }
                 }
                 catch (TaskCanceledException) { }
                 catch (Exception ex)

@@ -1,19 +1,19 @@
 {
   "SftpConfig": {
-    "Host": "127.0.0.1",
+    "Host": "200.166.2.203",
     "Port": 4422,
-    "User": "user",
-    "Password": "ubnt"
+    "User": "oper",
+    "Password": "foxconn168!!"
   },
   "Location": {
     "PcName": "UI-FT-00",
-    "Product": "UTPG3TM0T01",
-    "Station": "FT6",
+    "Product": "EOT",
+    "Station": "DOWNGRADE",
     "PcNumber": "00"
   },
   "CleaningApp": true,
-  "RemotePath": "/AutoDownload-store",
-  "AppLocalPath": "./Apps",
-  "CommonLocalPath": "./Common",
-  "UpdateTime": 5
+  "RemotePath": "/AutoDownload-DOWNGRADE",
+  "AppLocalPath": "D:/Apps",
+  "CommonLocalPath": "D:/Common",
+  "UpdateTime": 10
 }
