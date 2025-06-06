@@ -14,7 +14,8 @@ namespace UiStore.Models
         public string FTUVersion { get; set; }
         public string RemoteStoreDir { get; set; }
         public string RemoteAppListPath { get; set; }
-
+        public string AppIconPath { get; set; }
+        public FileModel AppIconFileModel { get; set; }
         public string Path { get; set; }
         public bool Enable { get; set; }
         public bool AutoOpen { get; set; }

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using UiStore.Common;
 using UiStore.Models;
-using static UiStore.Common.ConstKey;
 
 namespace UiStore.Services
 {
@@ -13,109 +13,109 @@ namespace UiStore.Services
     {
         private readonly CacheManager _cache;
         private readonly AppUnit _appUnit;
-        private readonly Logger _logger;
-        private AppModel _currentAppModel;
+        private readonly AppModelManagement _appModelManagement;
 
         public HashSet<FileModel> FilesToRemove { get; internal set; }
 
-        public AppUpdater(CacheManager cache, AppUnit appUnit, Logger logger)
+        public AppModel CurrentAppModel => _appModelManagement.CurrentAppModel;
+        private Logger Logger => _appUnit.Logger;
+        private AppStatusInfo AppStatus => _appUnit.AppStatusInfo;
+
+        public AppUpdater(CacheManager cache, AppUnit appUnit)
         {
             _cache = cache;
             _appUnit = appUnit;
-            _logger = logger;
+            _appModelManagement = new AppModelManagement(appUnit);
         }
 
-        public async Task CheckUpdate(AppModel app)
+        public async Task CheckUpdate()
         {
-            if (app == null || _appUnit.DoStatus != DoStatus.DO_NOTHING)
+            if ( !AppStatus.IsUpdateAble || !await _appModelManagement.UpdateAppModel())
             {
                 return;
             }
+            var appModel = _appModelManagement.CurrentAppModel;
             try
             {
-                _appUnit.DoStatus = DoStatus.CHECK_UPDATE_STATE;
-                _cache.RegisterLink(app);
-                if (_appUnit.IsRunning)
+                AppStatus.SetUpdating();
+                if (AppStatus.IsRunning)
                 {
-                    if (HasChangeProgramFiles(app))
+                    if (HasChangeProgramFiles(appModel))
                     {
-                        _logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> the program has a new version!");
-                        _appUnit.AppStatus = AppStatus.HAS_NEW_VERSION;
+                        Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> the program has a new version!");
+                        AppStatus.HasNewVersion = true;
+                    }
+                    else
+                    {
+                        AppStatus.HasNewVersion = false;
                     }
                 }
-                if (!await _cache.UpdateWareHouse(app, _appUnit))
+                if (!await _cache.UpdateWareHouse(appModel, _appUnit))
                 {
-                    _logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> update the warehouse failure!");
-                    _appUnit.AppStatus = AppStatus.UPDATE_FAILED;
+                    Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> update the warehouse failure!");
+                    AppStatus.SetUpdateFailed();
                 }
                 else
                 {
-                    if (!_appUnit.IsRunning && _appUnit.AppStatus == AppStatus.HAS_NEW_VERSION)
+                    if (!AppStatus.IsRunning)
                     {
-                        _appUnit.AppStatus = AppStatus.STANDBY;
+                        AppStatus.HasNewVersion = false;
                     }
+                    AppStatus.SetUpdateDone();
                 }
             }
             finally
             {
-                await UpdateIcon(app);
-                _appUnit.DoStatus = DoStatus.DO_NOTHING;
+                await UpdateIcon(appModel);
             }
         }
 
         public async Task<bool> CreateProgram(AppModel app)
         {
-            if (_appUnit.DoStatus != DoStatus.DO_NOTHING)
+            if (!AppStatus.IsExtractable)
             {
                 return false;
             }
-            bool rs = true;
             try
             {
-                _appUnit.DoStatus = DoStatus.CREATE_STATE;
+                AppStatus.SetExtracting();
                 int total = app.FileModels.Count;
                 int done = 0;
                 foreach (var file in app.FileModels)
                 {
                     if (!IsCheckSumPass(file.Md5, file.StorePath) && !await _cache.ExtractFileTo(file.Md5, file.StorePath, _appUnit))
                     {
-                        rs = false;
+                        Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> Launch failure! {file.ProgramPath}");
+                        AppStatus.SetExtractFailed();
+                        return false;
                     }
                     done++;
                     _appUnit.SetProgress((done * 100) / total);
                 }
-                return rs;
+                Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> Launch success!");
+                AppStatus.SetExtractDone();
+                return true;
             }
-            finally
+            catch (Exception ex)
             {
-                if (rs)
-                {
-                    _logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> Launch success!");
-                    _currentAppModel = app;
-                    if (_appUnit.AppStatus == AppStatus.HAS_NEW_VERSION)
-                    {
-                        _appUnit.AppStatus = AppStatus.STANDBY;
-                    }
-                }
-                else
-                {
-                    _logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> Launch failure!");
-                    _currentAppModel = null;
-                }
-                _appUnit.DoStatus = DoStatus.DO_NOTHING;
+                Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> {ex.Message}");
+                Logger.AddLogLine($"[{_appUnit.AppInfoModel.Name}] -> Launch failure!");
+                AppStatus.SetExtractFailed();
+                return false;
             }
         }
 
         private async Task<(bool, string)> IconAppHasChanged(AppModel appModel)
         {
-            var iconFile = appModel.FileModels.FirstOrDefault(f => Util.ArePathsEqual(f.ProgramPath, appModel.MainPath));
+            var iconFile = appModel.AppIconFileModel;
             if (iconFile != null)
             {
-                string iconPath = Path.Combine(_appUnit.AppInfoModel.IconDir, iconFile.ProgramPath);
+                string iconPath = appModel.AppIconPath;
                 return !IsCheckSumPass(iconFile.Md5, iconPath) && await _cache.ExtractFileTo(iconFile.Md5, iconPath, _appUnit) ? (true, iconPath) : (false, iconPath);
             }
             return (false, default);
         }
+
         private async Task UpdateIcon(AppModel appModel)
         {
             if (!string.IsNullOrEmpty(appModel.MainPath))
@@ -137,10 +137,6 @@ namespace UiStore.Services
         {
             int total = app.FileModels.Count;
             int done = 0;
-            if (HasChangeFileModels(app))
-            {
-                return true;
-            }
             bool result = false;
             foreach (var file in app.FileModels)
             {
@@ -151,31 +147,7 @@ namespace UiStore.Services
                 done++;
                 _appUnit.SetProgress((done * 100) / total);
             }
-            if (!result)
-            {
-                _currentAppModel = app;
-            }
             return result;
         }
-
-        private bool HasChangeFileModels(AppModel app)
-        {
-            if (_currentAppModel?.FileModels != null)
-            {
-                var toRemoves = new HashSet<FileModel>(_currentAppModel.FileModels);
-                toRemoves.ExceptWith(app.FileModels);
-                if (toRemoves.Count > 0)
-                {
-                    _cache.TryRemove(toRemoves);
-                    FilesToRemove = toRemoves;
-                    return true;
-                }
-                FilesToRemove?.Clear();
-                return false;
-            }
-            FilesToRemove?.Clear();
-            return true;
-        }
-
     }
 }

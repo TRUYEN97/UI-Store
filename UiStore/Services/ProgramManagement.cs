@@ -28,10 +28,11 @@ namespace UiStore.Services
             RemoveAppsNotExists(newConfigs);
         }
 
-        public void AddApp(AppViewModel appViewModel)
+        public void AddApp(AppViewModel appViewModel, AppModel appModel)
         {
             if (!IsContainApp(appViewModel))
             {
+                _cache.RegisterLink(appModel);
                 DispatcherHelper.RunOnUI(() =>
                 {
                     Applications.Add(appViewModel);
@@ -48,11 +49,14 @@ namespace UiStore.Services
                 _appBackgrounds.Remove(appViewModel.Name);
                 appViewModel.Dispose();
                 _logger.AddLogLine($"Remove [{appViewModel?.AppInfoModel?.Name}]");
-                if (appModel?.CloseAndClear == true)
+                if (appModel != null)
                 {
-                    RemoveProgramFolder(appViewModel.AppInfoModel);
+                    if (appModel?.CloseAndClear == true)
+                    {
+                        RemoveProgramFolder(appViewModel.AppInfoModel);
+                    }
+                    _cache.TryRemove(appModel?.FileModels);
                 }
-                _cache.TryRemove(appModel?.FileModels);
             }
         }
 

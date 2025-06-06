@@ -28,7 +28,7 @@ namespace UiStore.Services
         {
             if (Directory.Exists(baseFolder))
             {
-                foreach (var file in Directory.EnumerateFiles(baseFolder, "*.*", SearchOption.AllDirectories))
+                foreach (var file in Directory.EnumerateFiles(baseFolder, "*.zip", SearchOption.AllDirectories))
                 {
                     string md5 = Path.GetFileNameWithoutExtension(file);
                     _cache[md5] = new CacheItem(file)

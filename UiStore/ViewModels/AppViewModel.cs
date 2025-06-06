@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Windows;
@@ -10,6 +11,8 @@ using UiStore.Models;
 using UiStore.Services;
 using UiStore.View;
 using UiStore.ViewModels;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static UiStore.Services.AppStatusInfo;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 
@@ -18,14 +21,15 @@ namespace UiStore.ViewModel
     internal class AppViewModel : BaseViewModel, IDisposable
     {
         private static readonly Brush RunningBrush = Brushes.LightGreen;
-        private static readonly Brush UpdatingBrush = Brushes.LightYellow;
+        private static readonly Brush UpdatingBrush = Brushes.Yellow;
         private static readonly Brush StandbyBrush = Brushes.LightBlue;
         private static readonly Brush CreatingBrush = Brushes.LightSkyBlue;
         private static readonly Brush HasNewVersionBrush = Brushes.Orange;
-        private static readonly Brush DeletedBrush = Brushes.Brown;
+        private static readonly Brush DeletedBrush = Brushes.Black;
         private static readonly Brush UpdateFailedBrush = Brushes.Red;
         private static readonly Brush TransparentBrush = Brushes.Transparent;
         private readonly AppUnit _appUnit;
+        private readonly AppEvent _appStatus;
         public ICommand LaunchCommand { get; }
         public ICommand CloseCommand { get; }
         public ICommand ShowInfoCommand { get; }
@@ -33,6 +37,7 @@ namespace UiStore.ViewModel
         public AppViewModel(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, Logger logger)
         {
             _appUnit = new AppUnit(cache, programManagement, programPathModel, this, logger);
+            _appStatus = _appUnit.AppEvent;
             _backgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
             _statusBackgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
             _runningBackgroundColor = CreateSafeProperty(nameof(RunningBackgroundColor), StandbyBrush);
@@ -40,6 +45,7 @@ namespace UiStore.ViewModel
             LaunchCommand = new RelayCommand(_ => _appUnit.LaunchApp());
             CloseCommand = new RelayCommand(_ => _appUnit.CloseApp());
             ShowInfoCommand = new RelayCommand(_ => ShowInfo());
+            InitAppStatusAction();
         }
 
         public void StartUpdate() => _appUnit.StartUpdate();
@@ -62,15 +68,6 @@ namespace UiStore.ViewModel
         {
             get => _iconSource.Value;
             set => _iconSource.Value = value;
-        }
-        public void UpdateInfoForm()
-        {
-            OnPropertyChanged(nameof(Name));
-            OnPropertyChanged(nameof(FWVersion));
-            OnPropertyChanged(nameof(FCDVersion));
-            OnPropertyChanged(nameof(BOMVersion));
-            OnPropertyChanged(nameof(FTUVersion));
-            OnPropertyChanged(nameof(Version));
         }
 
         private readonly SafeDispatcherProperty<Brush> _backgroundColor;
@@ -146,68 +143,56 @@ namespace UiStore.ViewModel
                 return;
             }
         }
-        internal void RunningStatus(bool running)
+
+        private void InitAppStatusAction()
         {
-            DispatcherHelper.RunOnUI(() =>
+            _appStatus.RunningStatus.AddAction("Running", (b) =>
             {
-                if (running)
+                DispatcherHelper.RunOnUI(() =>
                 {
-                    RunningBackgroundColor = RunningBrush;
-                }
-                else
+                    if (b.Item1) RunningBackgroundColor = RunningBrush;
+                    else RunningBackgroundColor = StandbyBrush;
+                });
+            });
+            _appStatus.NewVersionStatus.AddAction("NewVersion", (b) =>
+            {
+                DispatcherHelper.RunOnUI(() =>
                 {
-                    RunningBackgroundColor = StandbyBrush;
-                }
+                    if (b) StatusBackgroundColor = HasNewVersionBrush;
+                    else StatusBackgroundColor = TransparentBrush;
+                });
+            });
+            _appStatus.NewVersionStatus.AddAction("InfoChanged", (b) =>
+            {
+                OnPropertyChanged(nameof(Name));
+                OnPropertyChanged(nameof(FWVersion));
+                OnPropertyChanged(nameof(FCDVersion));
+                OnPropertyChanged(nameof(BOMVersion));
+                OnPropertyChanged(nameof(FTUVersion));
+                OnPropertyChanged(nameof(Version));
+            });
+            _appStatus.UpdateAction.AddAction("update", (status) =>
+            {
+                DispatcherHelper.RunOnUI(() =>
+                {
+                    switch (status)
+                    {
+                        case UpdateState.SUCCESS:
+                            BackgroundColor = StandbyBrush;
+                            break;
+                        case UpdateState.FAILED:
+                            BackgroundColor = UpdateFailedBrush;
+                            break;
+                        case UpdateState.UPDATING:
+                            BackgroundColor = UpdatingBrush;
+                            break;
+                        default:
+                            BackgroundColor = StandbyBrush;
+                            break;
+                    }
+                });
             });
         }
-
-        internal void AppStatus(int status)
-        {
-            DispatcherHelper.RunOnUI(() =>
-            {
-                switch (status)
-                {
-                    case ConstKey.AppStatus.STANDBY:
-                        StatusBackgroundColor = TransparentBrush;
-                        break;
-                    case ConstKey.AppStatus.HAS_NEW_VERSION:
-                        StatusBackgroundColor = HasNewVersionBrush;
-                        break;
-                    case ConstKey.AppStatus.DELETED:
-                        StatusBackgroundColor = DeletedBrush;
-                        break;
-                    case ConstKey.AppStatus.UPDATE_FAILED:
-                        StatusBackgroundColor = UpdateFailedBrush;
-                        break;
-                    default:
-                        StatusBackgroundColor = TransparentBrush;
-                        break;
-                }
-            });
-        }
-
-        internal void DoStatus(int status)
-        {
-            DispatcherHelper.RunOnUI(() =>
-            {
-                switch (status)
-                {
-                    case ConstKey.DoStatus.DO_NOTHING:
-                        BackgroundColor = StandbyBrush;
-                        break;
-                    case ConstKey.DoStatus.CHECK_UPDATE_STATE:
-                        BackgroundColor = UpdatingBrush;
-                        break;
-                    case ConstKey.DoStatus.CREATE_STATE:
-                        BackgroundColor = CreatingBrush;
-                        break;
-                    default:
-                        BackgroundColor = StandbyBrush;
-                        break;
-                }
-            });
-        }
-
         public void Dispose()
         {
             _appUnit.Dispose();

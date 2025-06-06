@@ -49,7 +49,7 @@ namespace UiStore.ViewModel
 
         public void Start()
         {
-            _timer?.Start(0, 3000);
+            _timer?.Start(0, 5000);
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
             _ = Task.Run(() => LoopAsync(_cts.Token));

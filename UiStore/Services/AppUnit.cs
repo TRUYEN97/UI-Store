@@ -14,75 +14,59 @@ namespace UiStore.Services
     internal class AppUnit : IDisposable
     {
         private readonly AppUpdater _updater;
-        private readonly AppViewModel _appView;
-        private readonly Logger _logger;
-        private readonly ProgramManagement _programManagement;
-        private readonly Authentication authentication;
-        private readonly MyTimer _AutoOpentimer;
-        private readonly MyTimer _AutoDisabletimer;
+        private readonly Authentication _authentication;
         private CancellationTokenSource _cts;
-        private int _doStatus;
-        private int _appStatus;
-        private bool _isRunning;
         private readonly object _lock;
 
         internal AppUnit(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, AppViewModel app, Logger logger)
         {
-            _updater = new AppUpdater(cache, this, logger);
-            _programManagement = programManagement;
-            authentication = new Authentication(logger);
+            AppEvent = new AppEvent();
+            AppStatusInfo = new AppStatusInfo(AppEvent);
+            _updater = new AppUpdater(cache, this);
+            ProgramManagement = programManagement;
+            _authentication = new Authentication(logger);
             AppInfoModel = new AppInfoModel(programPathModel);
-            _appView = app;
-            _logger = logger;
+            AppView = app;
+            Logger = logger;
             _lock = new object();
-            _AutoOpentimer = new MyTimer((a) =>
+            AutoOpentimer = new MyTimer((_) =>
             {
-                if (IsRunanble())
+                if (AppStatusInfo.IsRunnable)
                 {
                     LaunchApp();
                 }
             });
-            _AutoDisabletimer = new MyTimer((a) =>
+            AutoDisabletimer = new MyTimer((_) =>
             {
-                if (!IsRunning)
+                if (!AppStatusInfo.IsRunning)
                 {
-                    _programManagement.DisableApp(app);
+                    ProgramManagement.DisableApp(AppView);
                 }
             });
+            InitEventAction();
         }
 
+        public AppViewModel AppView;
+
+        public Logger Logger {  get; private set; }
+
+        public ProgramManagement ProgramManagement {  get; private set; }
+        public AppEvent AppEvent { get; private set; }
+        public AppStatusInfo AppStatusInfo { get; private set; }
         public AppInfoModel AppInfoModel { get; private set; }
-        public AppModel AppModel { get; private set; }
+        public AppModel AppModel => _updater.CurrentAppModel;
+        public MyTimer AutoOpentimer { get; private set; }
+        public MyTimer AutoDisabletimer { get; private set; }
 
-        public bool IsRunning
-        {
-            get => _isRunning;
-            set
-            {
-                _isRunning = value;
-                _appView.RunningStatus(value);
-            }
-        }
-        public int DoStatus
-        {
-            get => _doStatus;
-            set
-            {
-                _doStatus = value;
-                _appView.DoStatus(DoStatus);
-            }
-        }
-
-        public int AppStatus { get => _appStatus; internal set { _appStatus = value; this._appView.AppStatus(value); } }
 
         public void SetProgress(int progress)
         {
-            this._appView.Progress = progress;
+            this.AppView.Progress = progress;
         }
 
         internal void CloseApp()
         {
-            if (IsRunning)
+            if (AppStatusInfo.IsRunning)
             {
                 //string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.CloseCmd}";
                 //Util.RunCmd(cmd);
@@ -95,16 +79,16 @@ namespace UiStore.Services
             {
                 lock (_lock)
                 {
-                    if (string.IsNullOrWhiteSpace(AppInfoModel?.AppPath) || AppModel == null || !IsRunanble()) return;
+                    if (!AppStatusInfo.IsRunnable) return;
                     Task.Run(async () =>
                     {
-                        authentication.AccessUserListModelPath = AppInfoModel?.AccectUserPath;
-                        if (await authentication.Login() && IsRunanble())
+                        _authentication.AccessUserListModelPath = AppInfoModel?.AccectUserPath;
+                        if (await _authentication.Login() && AppStatusInfo.IsRunnable)
                         {
                             try
                             {
 
-                                IsRunning = true;
+                                AppStatusInfo.IsRunning = true;
                                 if (await _updater.CreateProgram(AppModel))
                                 {
                                     string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.OpenCmd}";
@@ -113,19 +97,11 @@ namespace UiStore.Services
                             }
                             catch (Exception ex)
                             {
-                                _logger.AddLogLine(($"[{AppInfoModel.Name}]: {ex.Message}"));
+                                Logger.AddLogLine(($"[{AppInfoModel.Name}]: {ex.Message}"));
                             }
                             finally
                             {
-                                IsRunning = false;
-                                if (AppModel?.CloseAndClear == true)
-                                {
-                                    _programManagement.RemoveProgramFolder(AppInfoModel);
-                                }
-                                else
-                                {
-                                    _programManagement.RemoveProgram(_updater.FilesToRemove);
-                                }
+                                AppStatusInfo.IsRunning = false;
                             }
                         }
                     });
@@ -133,7 +109,7 @@ namespace UiStore.Services
             }
             catch (Exception ex)
             {
-                _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                Logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
             }
         }
 
@@ -141,7 +117,7 @@ namespace UiStore.Services
         {
             if (_cts != null && _cts.Token.IsCancellationRequested) return;
             _cts = new CancellationTokenSource();
-            _programManagement.RemoveAppIcon(AppInfoModel);
+            ProgramManagement.RemoveAppIcon(AppInfoModel);
             Task.Run(async () =>
             {
                 try
@@ -150,67 +126,22 @@ namespace UiStore.Services
                     {
                         try
                         {
-                            if (AppInfoModel?.AppPath == null)
-                            {
-                                StopUpdate();
-                            }
-                            AppModel = await TranforUtil.GetModelConfig<AppModel>(AppInfoModel?.AppPath, ConstKey.ZIP_PASSWORD);
-                            if (!AppModel.Enable || AppModel.FileModels == null || AppModel.FileModels.Count == 0)
-                            {
-                                _AutoDisabletimer.Start(0, 2000);
-                                AppStatus = ConstKey.AppStatus.DELETED;
-                            }
-                            else
-                            {
-                                AppStatus = ConstKey.AppStatus.STANDBY;
-                                _AutoDisabletimer.Stop();
-                                _appView.UpdateInfoForm();
-                                _programManagement.AddApp(_appView);
-                                InitStorePathFor(AppModel);
-                                await _updater.CheckUpdate(AppModel);
-                                if (AppModel.AutoOpen)
-                                {
-                                    _AutoOpentimer.Start(0, 1000);
-                                }
-                                else
-                                {
-                                    _AutoOpentimer.Stop();
-                                }
-                            }
+                            await _updater.CheckUpdate();
                             await Task.Delay(TimeSpan.FromSeconds(AutoDLConfig.ConfigModel.UpdateTime), _cts.Token);
                         }
                         catch (Exception ex)
                         {
-                            _logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                            Logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
                             StopUpdate();
                         }
                     }
                 }
                 finally
                 {
-                    _programManagement.RemoveApp(_appView, AppModel);
+                    ProgramManagement.RemoveApp(AppView, AppModel);
                 }
 
             }, _cts.Token);
-        }
-
-        private void InitStorePathFor(AppModel appModel)
-        {
-            string rootFolderPath = AppInfoModel.ProgramFolderPath;
-            foreach (var file in appModel.FileModels)
-            {
-                string storeFile = file.ProgramPath;
-                if (!string.IsNullOrWhiteSpace(rootFolderPath))
-                {
-                    storeFile = Path.Combine(rootFolderPath, file.ProgramPath);
-                }
-                file.StorePath = storeFile;
-            }
-        }
-
-        private bool IsRunanble()
-        {
-            return !IsRunning && DoStatus == ConstKey.DoStatus.DO_NOTHING && AppStatus == ConstKey.AppStatus.STANDBY;
         }
 
         internal void StopUpdate()
@@ -220,13 +151,51 @@ namespace UiStore.Services
 
         public void Dispose()
         {
-            _AutoOpentimer?.Dispose();
-            _AutoDisabletimer?.Dispose();
+            AutoOpentimer?.Dispose();
+            AutoDisabletimer?.Dispose();
+        }
+
+        private void InitEventAction()
+        {
+            AppEvent.EnableStatus.AddAction("AppEnableName", (b) =>
+            {
+                if (b)
+                {
+                    ProgramManagement.AddApp(AppView, AppModel);
+                    AutoDisabletimer.Stop();
+                }
+                else
+                {
+                    AutoDisabletimer.Start(0, 2000);
+                }
+            });
+            AppEvent.ActiveStatus.AddAction("AppDisableActionName", (b) =>
+            {
+                if (!b)
+                {
+                    StopUpdate();
+                }
+            });
+            AppEvent.AutoRunAction.AddAction("AutoRunActionName", (b) =>
+            {
+                if (!b)
+                    AutoOpentimer.Stop();
+                else
+                    AutoOpentimer.Start(0, 2000);
+            });
+            AppEvent.RunningStatus.AddAction("CloseAndClear", (b) =>
+            {
+                if (b.Item1) return;
+                if (b.Item2)
+                    ProgramManagement.RemoveProgramFolder(AppInfoModel);
+                else
+                    ProgramManagement.RemoveProgram(_updater.FilesToRemove);
+            });
         }
 
         internal void ExtractIconFromApp(string iconPath)
         {
-            _appView.ExtractIconFromApp(iconPath);
+            AppView.ExtractIconFromApp(iconPath);
         }
     }
 }
