@@ -11,56 +11,51 @@ using UiStore.Models;
 using UiStore.Services;
 using UiStore.View;
 using UiStore.ViewModels;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static UiStore.Services.AppStatusInfo;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 
 namespace UiStore.ViewModel
 {
-    internal class AppViewModel : BaseViewModel, IDisposable
+    internal class AppViewModel : BaseViewModel
     {
         private static readonly Brush RunningBrush = Brushes.LightGreen;
         private static readonly Brush UpdatingBrush = Brushes.Yellow;
         private static readonly Brush StandbyBrush = Brushes.LightBlue;
-        private static readonly Brush CreatingBrush = Brushes.LightSkyBlue;
         private static readonly Brush HasNewVersionBrush = Brushes.Orange;
         private static readonly Brush DeletedBrush = Brushes.Black;
         private static readonly Brush UpdateFailedBrush = Brushes.Red;
         private static readonly Brush TransparentBrush = Brushes.Transparent;
         private readonly AppUnit _appUnit;
-        private readonly AppEvent _appStatus;
         public ICommand LaunchCommand { get; }
         public ICommand CloseCommand { get; }
         public ICommand ShowInfoCommand { get; }
 
-        public AppViewModel(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, Logger logger)
+        public AppViewModel(CacheManager cache, ProgramManagement programManagement, AppInfoModel appInfoModel, Logger logger)
         {
-            _appUnit = new AppUnit(cache, programManagement, programPathModel, this, logger);
-            _appStatus = _appUnit.AppEvent;
-            _backgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
+            Name = appInfoModel.Name;
+            _appUnit = new AppUnit(cache, programManagement, appInfoModel, this, logger);
+            _backgroundColor = CreateSafeProperty(nameof(BackgroundColor), StandbyBrush);
             _statusBackgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
             _runningBackgroundColor = CreateSafeProperty(nameof(RunningBackgroundColor), StandbyBrush);
             _iconSource = CreateSafeProperty<ImageSource>(nameof(IconSource));
             LaunchCommand = new RelayCommand(_ => _appUnit.LaunchApp());
             CloseCommand = new RelayCommand(_ => _appUnit.CloseApp());
             ShowInfoCommand = new RelayCommand(_ => ShowInfo());
-            InitAppStatusAction();
         }
 
         public void StartUpdate() => _appUnit.StartUpdate();
         public void StopUpdate() => _appUnit.StopUpdate();
-
-        public string Name => _appUnit?.AppInfoModel?.Name;
-        public string FWVersion => _appUnit?.AppModel?.FWSersion;
-        public string FCDVersion => _appUnit?.AppModel?.FCDVersion;
-        public string BOMVersion => _appUnit?.AppModel?.BOMVersion;
-        public string FTUVersion => _appUnit?.AppModel?.FTUVersion;
-        public string Version => _appUnit?.AppModel?.Version;
+        public string Name { get => name; set { name = value; OnPropertyChanged(); } }
+        public string FWVersion { get => fWVersion; set { fWVersion = value; OnPropertyChanged(); } }
+        public string FCDVersion { get => fCDVersion; set { fCDVersion = value; OnPropertyChanged(); } }
+        public string BOMVersion { get => bOMVersion; set { bOMVersion = value; OnPropertyChanged(); } }
+        public string FTUVersion { get => fTUVersion; set { fTUVersion = value; OnPropertyChanged(); } }
+        public string Version { get => version; set { version = value; OnPropertyChanged(); } }
 
         public AppInfoModel AppInfoModel
         {
-            get => SafeGet(() => _appUnit.AppInfoModel);
+            get => SafeGet(() => _appUnit.InstanceWarehouse.AppInfoModel);
         }
 
         private readonly SafeDispatcherProperty<ImageSource> _iconSource;
@@ -99,6 +94,15 @@ namespace UiStore.ViewModel
 
 
         private bool _isHovered;
+        private string name;
+        private string fWVersion;
+        private string fCDVersion;
+        private string bOMVersion;
+        private string fTUVersion;
+        private string version;
+        private bool _isNewVersion;
+        private bool _isDeleted;
+
         public bool IsHovered
         {
             get => _isHovered;
@@ -144,58 +148,62 @@ namespace UiStore.ViewModel
             }
         }
 
-        private void InitAppStatusAction()
+        internal void SetRunning(bool isRunning)
         {
-            _appStatus.RunningStatus.AddAction("Running", (b) =>
+            DispatcherHelper.RunOnUI(() =>
             {
-                DispatcherHelper.RunOnUI(() =>
-                {
-                    if (b.Item1) RunningBackgroundColor = RunningBrush;
-                    else RunningBackgroundColor = StandbyBrush;
-                });
-            });
-            _appStatus.NewVersionStatus.AddAction("NewVersion", (b) =>
-            {
-                DispatcherHelper.RunOnUI(() =>
-                {
-                    if (b) StatusBackgroundColor = HasNewVersionBrush;
-                    else StatusBackgroundColor = TransparentBrush;
-                });
-            });
-            _appStatus.NewVersionStatus.AddAction("InfoChanged", (b) =>
-            {
-                OnPropertyChanged(nameof(Name));
-                OnPropertyChanged(nameof(FWVersion));
-                OnPropertyChanged(nameof(FCDVersion));
-                OnPropertyChanged(nameof(BOMVersion));
-                OnPropertyChanged(nameof(FTUVersion));
-                OnPropertyChanged(nameof(Version));
-            });
-            _appStatus.UpdateAction.AddAction("update", (status) =>
-            {
-                DispatcherHelper.RunOnUI(() =>
-                {
-                    switch (status)
-                    {
-                        case UpdateState.SUCCESS:
-                            BackgroundColor = StandbyBrush;
-                            break;
-                        case UpdateState.FAILED:
-                            BackgroundColor = UpdateFailedBrush;
-                            break;
-                        case UpdateState.UPDATING:
-                            BackgroundColor = UpdatingBrush;
-                            break;
-                        default:
-                            BackgroundColor = StandbyBrush;
-                            break;
-                    }
-                });
+                if (isRunning)
+                    RunningBackgroundColor = RunningBrush;
+                else
+                    RunningBackgroundColor = StandbyBrush;
             });
         }
-        public void Dispose()
+
+        private void OnStatusChanged()
         {
-            _appUnit.Dispose();
+            DispatcherHelper.RunOnUI(() =>
+            {
+                if (_isDeleted)
+                    StatusBackgroundColor = DeletedBrush;
+                else if (_isNewVersion)
+                    StatusBackgroundColor = HasNewVersionBrush;
+                else
+                    StatusBackgroundColor = TransparentBrush;
+            });
+        }
+
+        internal void SetNewVersionStatus(bool isNewVersion)
+        {
+            _isNewVersion = isNewVersion;
+            OnStatusChanged();
+        }
+
+        internal void SetDeletedStatus(bool isDeleted)
+        {
+            _isDeleted = isDeleted;
+            OnStatusChanged();
+        }
+
+        internal void SetUpdateStatus(UpdateState status)
+        {
+            DispatcherHelper.RunOnUI(() =>
+            {
+                switch (status)
+                {
+                    case UpdateState.SUCCESS:
+                        BackgroundColor = StandbyBrush;
+                        break;
+                    case UpdateState.FAILED:
+                        BackgroundColor = UpdateFailedBrush;
+                        break;
+                    case UpdateState.UPDATING:
+                        BackgroundColor = UpdatingBrush;
+                        break;
+                    default:
+                        BackgroundColor = StandbyBrush;
+                        break;
+                }
+            });
         }
     }
 

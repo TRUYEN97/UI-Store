@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
-using System.Xml.Linq;
 using UiStore.Common;
 using UiStore.Configs;
 using UiStore.Models;
@@ -28,95 +27,26 @@ namespace UiStore.Services
             RemoveAppsNotExists(newConfigs);
         }
 
-        public void AddApp(AppViewModel appViewModel, AppModel appModel)
+        public void AddApp(AppViewModel appViewModel)
         {
             if (!IsContainApp(appViewModel))
             {
-                _cache.RegisterLink(appModel);
                 DispatcherHelper.RunOnUI(() =>
                 {
                     Applications.Add(appViewModel);
-                    _logger.AddLogLine($"Add [{appViewModel?.AppInfoModel?.Name}]");
                 });
+                _logger.AddLogLine($"Add [{appViewModel.Name}]");
             }
         }
 
-        public void RemoveApp(AppViewModel appViewModel, AppModel appModel)
+        public void RemoveApp(AppViewModel appViewModel)
         {
             DisableApp(appViewModel);
             if (_appBackgrounds.ContainsKey(appViewModel.Name))
             {
                 _appBackgrounds.Remove(appViewModel.Name);
-                appViewModel.Dispose();
-                _logger.AddLogLine($"Remove [{appViewModel?.AppInfoModel?.Name}]");
-                if (appModel != null)
-                {
-                    if (appModel?.CloseAndClear == true)
-                    {
-                        RemoveProgramFolder(appViewModel.AppInfoModel);
-                    }
-                    _cache.TryRemove(appModel?.FileModels);
-                }
-            }
-        }
-
-        public void RemoveProgramFolder(AppInfoModel appInfoModel)
-        {
-            try
-            {
-                string dir = appInfoModel?.ProgramFolderPath;
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    if (Directory.Exists(dir))
-                    {
-                        Directory.Delete(dir, true);
-                    }
-                }
-                RemoveAppIcon(appInfoModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.AddLogLine($"[{appInfoModel.Name}]: {ex.Message}");
-            }
-        }
-
-        internal void RemoveAppIcon(AppInfoModel appInfoModel)
-        {
-            try
-            {
-                string dir = appInfoModel?.IconDir;
-                if (!string.IsNullOrEmpty(dir))
-                {
-                    if (Directory.Exists(dir))
-                    {
-                        Directory.Delete(dir, true);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.AddLogLine($"[{appInfoModel.Name}]: {ex.Message}");
-            }
-        }
-
-        internal void RemoveProgram(HashSet<FileModel> filesToRemove)
-        {
-            if (filesToRemove != null)
-            {
-                try
-                {
-                    foreach (var fileModel in filesToRemove)
-                    {
-                        if (File.Exists(fileModel.StorePath))
-                        {
-                            File.Delete(fileModel.StorePath);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.AddLogLine(ex.Message);
-                }
+                _logger.AddLogLine($"Remove [{appViewModel.Name}]");
+                _cache.TryRemoveWith(appViewModel.Name);
             }
         }
 
@@ -149,6 +79,7 @@ namespace UiStore.Services
             if (!string.IsNullOrEmpty(name) && !TryGetBackGroupApp(name, out _))
             {
                 _appBackgrounds.Add(name, app);
+                app.StartUpdate();
             }
         }
 
@@ -168,18 +99,22 @@ namespace UiStore.Services
         {
             foreach (var config in newConfigs)
             {
-                if (!TryGetBackGroupApp(config.Key, out var appVm))
+                string name = config.Key;
+                ProgramPathModel pathModel = config.Value;
+                if (!TryGetBackGroupApp(name, out var appVm))
                 {
-                    appVm = new AppViewModel(_cache, this, config.Value, _logger);
-                    appVm.AppInfoModel.Name = config.Key;
-                    appVm.AppInfoModel.RootDir = AutoDLConfig.ConfigModel.AppLocalPath;
-                    appVm.AppInfoModel.CommonFolderPath = AutoDLConfig.ConfigModel.CommonLocalPath;
-                    appVm.StartUpdate();
+                    var AppInfoModel = new AppInfoModel(pathModel)
+                    {
+                        Name = name,
+                        RootDir = AutoDLConfig.ConfigModel.AppLocalPath,
+                        CommonFolderPath = AutoDLConfig.ConfigModel.CommonLocalPath
+                    };
+                    appVm = new AppViewModel(_cache, this, AppInfoModel, _logger.CreateNew(name));
                     AddAppToBackGroud(appVm);
                 }
-                else if (appVm.AppInfoModel.AppPath != config.Value.AppPath)
+                else if (appVm.AppInfoModel.AppPath != pathModel.AppPath)
                 {
-                    appVm.AppInfoModel.Update(config.Value);
+                    appVm.AppInfoModel.Update(pathModel);
                 }
             }
         }

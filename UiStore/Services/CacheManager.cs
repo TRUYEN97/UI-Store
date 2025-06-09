@@ -55,7 +55,7 @@ namespace UiStore.Services
         }
 
 
-        public async Task<bool> ExtractFileTo(string md5, string storePath, AppUnit appUnit)
+        public async Task<bool> ExtractFileTo(string md5, string storePath)
         {
             if (string.IsNullOrWhiteSpace(md5))
             {
@@ -70,7 +70,7 @@ namespace UiStore.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.AddLogLine($"[{appUnit.AppInfoModel.Name}] Unzip.Extract, {cachedItem} -> {storePath}: {ex.Message}");
+                    _logger.AddLogLine($"Unzip.Extract, {cachedItem} -> {storePath}: {ex.Message}");
                     return false;
                 }
                 finally
@@ -86,7 +86,7 @@ namespace UiStore.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.AddLogLine($"[{appUnit.AppInfoModel.Name}] Unzip.checksum, {storePath}: {ex.Message}");
+                    _logger.AddLogLine($"Unzip.checksum, {storePath}: {ex.Message}");
                     return false;
                 }
                 Remove(md5);
@@ -94,48 +94,18 @@ namespace UiStore.Services
             return false;
         }
 
-        public async Task<bool> UpdateWareHouse(AppModel app, AppUnit appUnit)
+        public async Task<bool> UpdateItem(FileModel fileModel)
         {
-            int total = app.FileModels.Count;
-            int done = 0;
-            List<FileModel> toRemote = new List<FileModel>();
-            List<FileModel> NeedToCheck = new List<FileModel>(app.FileModels);
-            while (NeedToCheck.Count > 0)
-            {
-                toRemote.Clear();
-                foreach (var fileModel in NeedToCheck)
-                {
-                    var cacheItem = await UpdateItem(fileModel, appUnit);
-                    if (cacheItem.Standby)
-                    {
-                        appUnit.SetProgress((++done * 100) / total);
-                        toRemote.Add(fileModel);
-                    }
-                    else if (cacheItem.Init)
-                    {
-                        break;
-                    }
-                }
-                foreach (var fileModel in toRemote)
-                {
-                    NeedToCheck.Remove(fileModel);
-                }
-            }
-            return done == total;
-        }
-
-        private async Task<CacheItem> UpdateItem(FileModel fileModel, AppUnit appUnit)
-        {
-            var cacheItem = GetCacheItem(fileModel, appUnit);
+            var cacheItem = GetCacheItem(fileModel);
             if (cacheItem.Standby)
             {
-                return cacheItem;
+                return true;
             }
             cacheItem = await Download(fileModel);
-            return cacheItem;
+            return cacheItem.Standby;
         }
 
-        private CacheItem GetCacheItem(FileModel fileModel, AppUnit appUnit)
+        private CacheItem GetCacheItem(FileModel fileModel)
         {
             if (!_cache.ContainsKey(fileModel.Md5))
             {
@@ -143,8 +113,8 @@ namespace UiStore.Services
                 {
                     if (!_cache.ContainsKey(fileModel.Md5))
                     {
-                        string zipPath = Path.Combine(appUnit.AppInfoModel.CommonFolderPath, Path.GetFileName(fileModel.RemotePath));
-                        _cache[fileModel.Md5] = new CacheItem(zipPath);
+                        var cacheItem = new CacheItem(fileModel.ZipPath);
+                        _cache[fileModel.Md5] = cacheItem;
                     }
                 }
             }
@@ -155,13 +125,13 @@ namespace UiStore.Services
         {
             try
             {
-                if (_cache.TryGetValue(fileModel.Md5, out var cacheItem) && cacheItem.Init)
+                if (_cache.TryGetValue(fileModel.Md5, out var cacheItem) && cacheItem.CanUpdate)
                 {
                     try
                     {
                         lock (_updateLock)
                         {
-                            if (!cacheItem.Init)
+                            if (!cacheItem.CanUpdate)
                             {
                                 return cacheItem;
                             }
@@ -227,26 +197,27 @@ namespace UiStore.Services
             }
         }
 
-        internal void TryRemove(HashSet<FileModel> toRemoves)
+        internal void TryRemoveWith(string appName)
         {
-            if (toRemoves == null)
+            if (string.IsNullOrEmpty(appName))
             {
                 return;
             }
-            foreach (var fileModel in toRemoves)
+            var toRemoveMd5 = new List<string>();
+            foreach (var cacheItem in _cache)
             {
-                TryRemove(fileModel);
-            }
-        }
-
-        internal void TryRemove(FileModel toRemove)
-        {
-            if (_cache.TryGetValue(toRemove.Md5, out var cacheItem))
-            {
-                cacheItem.RemoveLink(toRemove.StorePath);
-                if (cacheItem.IsUseless())
+                cacheItem.Value.RemoveLink(appName);
+                if (cacheItem.Value.IsUseless())
                 {
-                    Remove(toRemove.Md5);
+                    toRemoveMd5.Add(cacheItem.Key);
+                }
+            }
+            foreach (var md5 in toRemoveMd5)
+            {
+                _cache.TryRemove(md5, out var cacheItem);
+                if (_cache.TryRemove(md5, out _) && File.Exists(cacheItem.Path))
+                {
+                    File.Delete(cacheItem.Path);
                 }
             }
         }
@@ -267,6 +238,7 @@ namespace UiStore.Services
 
             public bool Init => Status == DlStatus.Init;
 
+            public bool CanUpdate => !Standby && Status != DlStatus.Loading;
             public void RemoveLink(string link)
             {
                 linked.Remove(link);

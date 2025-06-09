@@ -3,38 +3,20 @@
   "WorkspaceRootPath": "D:\\C#\\UiStore\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{00000000-0000-0000-0000-000000000000}|\u003CSolution\u003E|UiStore||{04B8AB82-A572-4FEF-95CE-5222444B6B64}|"
+      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appevent.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appmodelmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appmodelmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appstatusinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appstatusinfo.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\programmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\programmanagement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appupdater.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appupdater.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appattack.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appattack.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\appunit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\appunit.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\services\\onappaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\services\\onappaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\viewmodels\\appviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\viewmodels\\appviewmodel.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\||{B270807C-D8C6-49EB-8EBE-8E8D566637A1}|5e9a8ac2-4f34-4521-858f-4c248ba31532"
+      "AbsoluteMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|d:\\c#\\uistore\\uistore\\models\\instancewarehouse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8E87960C-61C1-4348-AF5F-197C1B86F0EB}|UiStore\\UiStore.csproj|solutionrelative:uistore\\models\\instancewarehouse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -44,109 +26,58 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 3,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "UiStore",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\UiStore.csproj",
-              "RelativeDocumentMoniker": "UiStore\\UiStore.csproj",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\UiStore.csproj",
-              "RelativeToolTip": "UiStore\\UiStore.csproj",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
-              "WhenOpened": "2025-06-06T13:35:08.005Z",
+              "DocumentIndex": 1,
+              "Title": "AppAttack.cs",
+              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppAttack.cs",
+              "RelativeDocumentMoniker": "UiStore\\Services\\AppAttack.cs",
+              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppAttack.cs",
+              "RelativeToolTip": "UiStore\\Services\\AppAttack.cs",
+              "ViewState": "AgIAABoAAAAAAAAAAAAnwC8AAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-09T08:40:28.801Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 2,
-              "Title": "AppStatusInfo.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppStatusInfo.cs",
-              "RelativeDocumentMoniker": "UiStore\\Services\\AppStatusInfo.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppStatusInfo.cs",
-              "RelativeToolTip": "UiStore\\Services\\AppStatusInfo.cs",
-              "ViewState": "AgIAABEAAAAAAAAAAAAswCwAAAAjAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T13:30:53.848Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "OnAppAction.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\OnAppAction.cs",
-              "RelativeDocumentMoniker": "UiStore\\Services\\OnAppAction.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\OnAppAction.cs",
-              "RelativeToolTip": "UiStore\\Services\\OnAppAction.cs",
-              "ViewState": "AgIAAAsAAAAAAAAAAAAxwDEAAAABAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T13:13:01.198Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "ProgramManagement.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\ProgramManagement.cs",
-              "RelativeDocumentMoniker": "UiStore\\Services\\ProgramManagement.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\ProgramManagement.cs",
-              "RelativeToolTip": "UiStore\\Services\\ProgramManagement.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAAAYwB4AAAAnAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T09:36:10.042Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "AppModelManagement.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppModelManagement.cs",
-              "RelativeDocumentMoniker": "UiStore\\Services\\AppModelManagement.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppModelManagement.cs",
-              "RelativeToolTip": "UiStore\\Services\\AppModelManagement.cs",
-              "ViewState": "AgIAACEAAAAAAAAAAAAWwDMAAAArAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T07:52:48.495Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "AppUpdater.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppUpdater.cs",
-              "RelativeDocumentMoniker": "UiStore\\Services\\AppUpdater.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppUpdater.cs",
-              "RelativeToolTip": "UiStore\\Services\\AppUpdater.cs",
-              "ViewState": "AgIAAHwAAAAAAAAAAAAWwCAAAAANAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T07:34:10.897Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
               "Title": "AppUnit.cs",
               "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppUnit.cs",
               "RelativeDocumentMoniker": "UiStore\\Services\\AppUnit.cs",
               "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppUnit.cs",
               "RelativeToolTip": "UiStore\\Services\\AppUnit.cs",
-              "ViewState": "AgIAAJIAAAAAAAAAAAA2wEoAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAADoAAAAAAAAAAADgvyEAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T04:13:56.768Z",
+              "WhenOpened": "2025-06-09T08:04:10.267Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "AppViewModel.cs",
-              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\ViewModels\\AppViewModel.cs",
-              "RelativeDocumentMoniker": "UiStore\\ViewModels\\AppViewModel.cs",
-              "ToolTip": "D:\\C#\\UiStore\\UiStore\\ViewModels\\AppViewModel.cs",
-              "RelativeToolTip": "UiStore\\ViewModels\\AppViewModel.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAEwJ4AAAAtAAAAAAAAAA==",
+              "DocumentIndex": 3,
+              "Title": "InstanceWarehouse.cs",
+              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Models\\InstanceWarehouse.cs",
+              "RelativeDocumentMoniker": "UiStore\\Models\\InstanceWarehouse.cs",
+              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Models\\InstanceWarehouse.cs",
+              "RelativeToolTip": "UiStore\\Models\\InstanceWarehouse.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAqwB0AAAAmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-06-06T12:49:24.039Z",
+              "WhenOpened": "2025-06-09T07:24:07.381Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AppEvent.cs",
+              "DocumentMoniker": "D:\\C#\\UiStore\\UiStore\\Services\\AppEvent.cs",
+              "RelativeDocumentMoniker": "UiStore\\Services\\AppEvent.cs",
+              "ToolTip": "D:\\C#\\UiStore\\UiStore\\Services\\AppEvent.cs*",
+              "RelativeToolTip": "UiStore\\Services\\AppEvent.cs*",
+              "ViewState": "AgIAAKoAAAAAAAAAAAAmwL8AAAArAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-09T03:28:19.258Z",
               "EditorCaption": ""
             }
           ]

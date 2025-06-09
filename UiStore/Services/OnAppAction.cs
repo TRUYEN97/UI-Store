@@ -1,36 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace UiStore.Services
 {
-    internal class OnAppAction<T>
+    internal class OnAppAction<T, M>
     {
-        private readonly Dictionary<string, Action<T>> OnActions;
-        public OnAppAction()
+        private readonly List<RelayAction<T, M>>OnActions;
+        private readonly M _model;
+        public OnAppAction(M model)
         {
-            OnActions = new Dictionary<string, Action<T>>();
+            OnActions = new List<RelayAction<T, M>>();
+            _model = model;
         }
 
-        public void AddAction(string name, Action<T> action)
+        public void Add(RelayAction<T, M> action)
         {
-            if (string.IsNullOrEmpty(name) || action == null) return;
-            OnActions[name] = action;
-        }
-        public void RemoveAction(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return;
-            OnActions.Remove(name);
+            if (action == null) return;
+            OnActions.Add(action);
         }
 
-        public void OnActiveChanged()
+        public void Remove(string name)
         {
-            foreach (var action in OnActions.Values)
+            foreach (var action in OnActions)
             {
-                action?.Invoke(_value);
+                if(action.Name == name)
+                {
+                    OnActions.Remove(action);
+                }
             }
+        }
+        public void RunActions()
+        {
+            foreach (var action in OnActions)
+            {
+                if (action.CanAction == null || action.CanAction.Invoke(_value, _model))
+                {
+                    action.Action.Invoke(_value, _model);
+                }
+            }
+        }
+
+        internal void SetValue(T value)
+        {
+            _value = value;
+            RunActions();
         }
 
         private T _value;
@@ -41,8 +55,7 @@ namespace UiStore.Services
             {
                 if (_value == null || !_value.Equals(value))
                 {
-                    _value = value;
-                    OnActiveChanged();
+                    SetValue(value);
                 }
             }
         }

@@ -112,10 +112,12 @@
     </ApplicationDefinition>
     <Compile Include="Behaviors\MouseDoubleClickBehavior.cs" />
     <Compile Include="Models\AppInfoModel.cs" />
+    <Compile Include="Models\InstanceWarehouse.cs" />
     <Compile Include="Services\AppModelComparetor.cs" />
     <Compile Include="Services\AppModelManagement.cs" />
     <Compile Include="Services\AppEvent.cs" />
     <Compile Include="Services\AppStatusInfo.cs" />
+    <Compile Include="Services\AppStoreFileManagement.cs" />
     <Compile Include="Services\Authentication.cs" />
     <Compile Include="Common\ConstKey.cs" />
     <Compile Include="Common\ProgramInfo.cs" />
@@ -123,6 +125,7 @@
     <Compile Include="Services\Logger.cs" />
     <Compile Include="Services\MyTimer.cs" />
     <Compile Include="Services\OnAppAction.cs" />
+    <Compile Include="Services\RelayAction.cs" />
     <Compile Include="Services\ProgramManagement.cs" />
     <Compile Include="Services\TranforUtil.cs" />
     <Compile Include="Common\PathUtil.cs" />
@@ -141,7 +144,7 @@
     <Compile Include="Models\UserModel.cs" />
     <Compile Include="Services\AppUnit.cs" />
     <Compile Include="ViewModels\AppViewModel.cs" />
-    <Compile Include="Services\AppUpdater.cs" />
+    <Compile Include="Services\AppAttack.cs" />
     <Compile Include="Services\CacheManager.cs" />
     <Compile Include="ViewModels\BaseViewModel.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />

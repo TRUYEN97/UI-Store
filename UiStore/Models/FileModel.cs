@@ -6,6 +6,7 @@ namespace UiStore.Models
     {
         public string ProgramPath { get; set; }
         public string StorePath { get; set; }
+        public string ZipPath { get; set; }
         public string RemotePath { get; set; }
         public string Md5 { get; set; }
 

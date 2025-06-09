@@ -14,9 +14,9 @@ namespace UiStore.ViewModel
     internal class MainViewModel : BaseViewModel
     {
         public ObservableCollection<string> Ips { get; } = new ObservableCollection<string>();
-
+        public ObservableCollection<string> LogLines {  get; } = new ObservableCollection<string>();
         private readonly Location _location;
-        private readonly Logger _logger;
+        private readonly Logger _mainLogger;
         private readonly Authentication _authentication;
         private readonly ProgramManagement _programManagement;
         private readonly MyTimer _timer;
@@ -29,11 +29,11 @@ namespace UiStore.ViewModel
             PcName = PcInfo.PcName;
             Product = _location.Product;
             Station = _location.Station;
-            _logger = new Logger();
-            var cache = new CacheManager(_logger);
+            _mainLogger = new Logger(LogLines, "Ui Store");
+            var cache = new CacheManager(_mainLogger);
             cache.LoadFromFolder(AutoDLConfig.ConfigModel.CommonLocalPath);
-            _programManagement = new ProgramManagement(cache, this._logger);
-            _authentication = new Authentication(this._logger, PathUtil.GetStationAccessUserPath(_location));
+            _programManagement = new ProgramManagement(cache, _mainLogger);
+            _authentication = new Authentication(_mainLogger, PathUtil.GetStationAccessUserPath(_location));
             Title = $"{ProgramInfo.ProductName} - V{ProgramInfo.ProductVersion}";
             _timer = new MyTimer((_) =>
             {
@@ -41,7 +41,6 @@ namespace UiStore.ViewModel
             });
         }
         public ObservableCollection<AppViewModel> Applications => _programManagement.Applications;
-        public ObservableCollection<string> LogLines => _logger.LogLines;
         public string PcName { get; private set; }
         public string Title { get; private set; }
         public string Product { get; private set; }
@@ -84,7 +83,7 @@ namespace UiStore.ViewModel
                 catch (TaskCanceledException) { }
                 catch (Exception ex)
                 {
-                    _logger.AddLogLine(ex.Message);
+                    _mainLogger.AddLogLine(ex.Message);
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }

@@ -3,59 +3,67 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UiStore.Common;
+using UiStore.Models;
 
 namespace UiStore.Services
 {
     internal class AppStatusInfo
     {
-        private readonly AppEvent appEvent;
+        private readonly AppEvent _appEvent;
         public AppStatusInfo(AppEvent appEvent)
         {
-            this.appEvent = appEvent;
+            _appEvent = appEvent;
         }
 
         public bool IsRunning
         {
-            get => appEvent.RunningStatus.Value.Item1;
-            set => appEvent.RunningStatus.Value = (value,  IsCloseAndClear);
+            get => _appEvent.RunningStatus.Value;
+            set => _appEvent.RunningStatus.Value = value;
         }
         public bool IsAutoRun
         {
-            get => appEvent.AutoRunAction.Value;
-            set => appEvent.AutoRunAction.Value = value;
+            get => _appEvent.AutoRunAction.Value;
+            set => _appEvent.AutoRunAction.Value = value;
         }
         public UpdateState UpdateStatus
         {
-            get => appEvent.UpdateAction.Value;
-            set => appEvent.UpdateAction.Value = value;
+            get => _appEvent.UpdateAction.Value;
+            set => _appEvent.UpdateAction.Value = value;
         }
         public ExtractState ExtractStatus
         {
-            get => appEvent.ExtractAction.Value;
-            set => appEvent.ExtractAction.Value = value;
+            get => _appEvent.ExtractAction.Value;
+            set => _appEvent.ExtractAction.Value = value;
         }
         public bool HasNewVersion
         {
-            get => appEvent.NewVersionStatus.Value;
-            set => appEvent.NewVersionStatus.Value = value;
+            get => _appEvent.HasNewVersion.Value;
+            set => _appEvent.HasNewVersion.Value = value;
         }
 
-        public bool IsAppAvailable { get => this.appEvent.ActiveStatus.Value; set { this.appEvent.ActiveStatus.Value = value; } }
-        public bool IsEnable { get => this.appEvent.EnableStatus.Value; set { this.appEvent.EnableStatus.Value = value; } }
-        public bool IsCloseAndClear { get; set; }
-        public bool IsRunnable => !IsRunning && UpdateStatus == UpdateState.SUCCESS && ExtractStatus == ExtractState.SUCCESS && !HasNewVersion;
-        public bool IsExtractable => UpdateStatus == UpdateState.SUCCESS && ExtractStatus != ExtractState.EXTRACTING && !HasNewVersion;
-        public bool IsUpdateAble => !IsRunning && UpdateStatus != UpdateState.UPDATING && ExtractStatus != ExtractState.EXTRACTING && !HasNewVersion;
+        public int Progress
+        {
+            get => _appEvent.Progress.Value;
+            set => _appEvent.Progress.Value = value;
+        }
 
-       
+        public bool IsAppAvailable { get => this._appEvent.ActiveStatus.Value; set { this._appEvent.ActiveStatus.Value = value; } }
+        public bool IsEnable { get => this._appEvent.EnableStatus.Value; set { this._appEvent.EnableStatus.Value = value; } }
+        public bool IsCloseAndClear { get; set; }
+        public bool HasUpdate { get => this._appEvent.HasUpdate.Value; set { this._appEvent.HasUpdate.Value = value; } }
+        public bool IsRunnable => IsAppAvailable && IsEnable && !IsRunning && UpdateStatus == UpdateState.SUCCESS && ExtractStatus == ExtractState.SUCCESS && !HasNewVersion;
+        public bool IsExtractable => IsAppAvailable &&  IsEnable && UpdateStatus == UpdateState.SUCCESS && ExtractStatus != ExtractState.EXTRACTING && !HasNewVersion;
+        public bool IsUpdateAble => IsAppAvailable &&  UpdateStatus != UpdateState.UPDATING && ExtractStatus != ExtractState.EXTRACTING;
+
         internal void SetExtractDone()
         {
             ExtractStatus = ExtractState.SUCCESS;
-        } 
+        }
         internal void SetExtracting()
         {
             ExtractStatus = ExtractState.EXTRACTING;
-        } 
+        }
         internal void SetExtractFailed()
         {
             ExtractStatus = ExtractState.FAILED;
@@ -84,8 +92,9 @@ namespace UiStore.Services
         public enum ExtractState
         {
             SUCCESS = 0,
-            EXTRACTING= 1,
+            EXTRACTING = 1,
             FAILED = 2
         }
+
     }
 }

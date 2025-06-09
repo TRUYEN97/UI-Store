@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using UiStore.Common;
 using UiStore.Configs;
 using UiStore.Models;
 using UiStore.ViewModel;
@@ -11,62 +10,53 @@ using UiStore.ViewModel;
 namespace UiStore.Services
 {
 
-    internal class AppUnit : IDisposable
+    internal class AppUnit
     {
-        private readonly AppUpdater _updater;
+        private readonly InstanceWarehouse _instanceWarehouse;
+        private readonly AppModelManagement _appModelManagement;
+        private readonly AppStoreFileManagement _appStoreFileManagement;
+        private readonly AppViewModel _appView;
+        private readonly ProgramManagement _programManagement;
+        private readonly AppEvent _appEvent;
+        private readonly AppStatusInfo _appStatusInfo;
+        private readonly AppInfoModel _appInfoModel;
+        private readonly AppAttack _updater;
         private readonly Authentication _authentication;
+        private readonly Logger _logger;
         private CancellationTokenSource _cts;
         private readonly object _lock;
 
-        internal AppUnit(CacheManager cache, ProgramManagement programManagement, ProgramPathModel programPathModel, AppViewModel app, Logger logger)
+        internal AppUnit(CacheManager cache, ProgramManagement programManagement, AppInfoModel appInfoModel, AppViewModel appView, Logger logger)
         {
-            AppEvent = new AppEvent();
-            AppStatusInfo = new AppStatusInfo(AppEvent);
-            _updater = new AppUpdater(cache, this);
-            ProgramManagement = programManagement;
-            _authentication = new Authentication(logger);
-            AppInfoModel = new AppInfoModel(programPathModel);
-            AppView = app;
-            Logger = logger;
+            _programManagement = programManagement;
+            _appInfoModel = appInfoModel;
+            _appView = appView;
+            _logger = logger;
+            _instanceWarehouse = new InstanceWarehouse();
+            _appEvent = new AppEvent(logger, _instanceWarehouse);
+            _appStatusInfo = new AppStatusInfo(_appEvent);
+            _appModelManagement = new AppModelManagement(appInfoModel, _appStatusInfo);
+            _appStoreFileManagement = new AppStoreFileManagement(_appInfoModel, _appModelManagement);
+            _updater = new AppAttack(cache, _instanceWarehouse, logger);
+            _authentication = new Authentication(logger)
+            {
+                AccessUserListModelPath = _appInfoModel?.AccectUserPath
+            };
             _lock = new object();
-            AutoOpentimer = new MyTimer((_) =>
-            {
-                if (AppStatusInfo.IsRunnable)
-                {
-                    LaunchApp();
-                }
-            });
-            AutoDisabletimer = new MyTimer((_) =>
-            {
-                if (!AppStatusInfo.IsRunning)
-                {
-                    ProgramManagement.DisableApp(AppView);
-                }
-            });
-            InitEventAction();
+            _instanceWarehouse.AppStatusInfo = _appStatusInfo;
+            _instanceWarehouse.AppInfoModel = _appInfoModel;
+            _instanceWarehouse.AppUnit = this;
+            _instanceWarehouse.AppViewModel = appView;
+            _instanceWarehouse.AppModelManagement = _appModelManagement;
+            _instanceWarehouse.AppStoreFileManagement = _appStoreFileManagement;
+            _instanceWarehouse.ProgramManagement = _programManagement;
         }
 
-        public AppViewModel AppView;
-
-        public Logger Logger {  get; private set; }
-
-        public ProgramManagement ProgramManagement {  get; private set; }
-        public AppEvent AppEvent { get; private set; }
-        public AppStatusInfo AppStatusInfo { get; private set; }
-        public AppInfoModel AppInfoModel { get; private set; }
-        public AppModel AppModel => _updater.CurrentAppModel;
-        public MyTimer AutoOpentimer { get; private set; }
-        public MyTimer AutoDisabletimer { get; private set; }
-
-
-        public void SetProgress(int progress)
-        {
-            this.AppView.Progress = progress;
-        }
+        public InstanceWarehouse InstanceWarehouse => _instanceWarehouse;
 
         internal void CloseApp()
         {
-            if (AppStatusInfo.IsRunning)
+            if (_appStatusInfo.IsRunning)
             {
                 //string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.CloseCmd}";
                 //Util.RunCmd(cmd);
@@ -77,39 +67,22 @@ namespace UiStore.Services
         {
             try
             {
+                if (!_appStatusInfo.IsRunnable) return;
                 lock (_lock)
                 {
-                    if (!AppStatusInfo.IsRunnable) return;
+                    if (!_appStatusInfo.IsRunnable) return;
                     Task.Run(async () =>
                     {
-                        _authentication.AccessUserListModelPath = AppInfoModel?.AccectUserPath;
-                        if (await _authentication.Login() && AppStatusInfo.IsRunnable)
+                        if (await _authentication.Login() && _appStatusInfo.IsRunnable)
                         {
-                            try
-                            {
-
-                                AppStatusInfo.IsRunning = true;
-                                if (await _updater.CreateProgram(AppModel))
-                                {
-                                    string cmd = $"cd \"{AppInfoModel.ProgramFolderPath}\" && {AppModel.OpenCmd}";
-                                    Util.RunCmd(cmd);
-                                }
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.AddLogLine(($"[{AppInfoModel.Name}]: {ex.Message}"));
-                            }
-                            finally
-                            {
-                                AppStatusInfo.IsRunning = false;
-                            }
+                            await _updater.Open();
                         }
                     });
                 }
             }
             catch (Exception ex)
             {
-                Logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                _logger.AddLogLine(ex.Message);
             }
         }
 
@@ -117,7 +90,6 @@ namespace UiStore.Services
         {
             if (_cts != null && _cts.Token.IsCancellationRequested) return;
             _cts = new CancellationTokenSource();
-            ProgramManagement.RemoveAppIcon(AppInfoModel);
             Task.Run(async () =>
             {
                 try
@@ -131,14 +103,14 @@ namespace UiStore.Services
                         }
                         catch (Exception ex)
                         {
-                            Logger.AddLogLine($"[{AppInfoModel.Name}]: {ex.Message}");
+                            _logger.AddLogLine(ex.Message);
                             StopUpdate();
                         }
                     }
                 }
                 finally
                 {
-                    ProgramManagement.RemoveApp(AppView, AppModel);
+                    _appStatusInfo.IsAppAvailable = false;
                 }
 
             }, _cts.Token);
@@ -149,53 +121,9 @@ namespace UiStore.Services
             _cts?.Cancel();
         }
 
-        public void Dispose()
-        {
-            AutoOpentimer?.Dispose();
-            AutoDisabletimer?.Dispose();
-        }
-
-        private void InitEventAction()
-        {
-            AppEvent.EnableStatus.AddAction("AppEnableName", (b) =>
-            {
-                if (b)
-                {
-                    ProgramManagement.AddApp(AppView, AppModel);
-                    AutoDisabletimer.Stop();
-                }
-                else
-                {
-                    AutoDisabletimer.Start(0, 2000);
-                }
-            });
-            AppEvent.ActiveStatus.AddAction("AppDisableActionName", (b) =>
-            {
-                if (!b)
-                {
-                    StopUpdate();
-                }
-            });
-            AppEvent.AutoRunAction.AddAction("AutoRunActionName", (b) =>
-            {
-                if (!b)
-                    AutoOpentimer.Stop();
-                else
-                    AutoOpentimer.Start(0, 2000);
-            });
-            AppEvent.RunningStatus.AddAction("CloseAndClear", (b) =>
-            {
-                if (b.Item1) return;
-                if (b.Item2)
-                    ProgramManagement.RemoveProgramFolder(AppInfoModel);
-                else
-                    ProgramManagement.RemoveProgram(_updater.FilesToRemove);
-            });
-        }
-
         internal void ExtractIconFromApp(string iconPath)
         {
-            AppView.ExtractIconFromApp(iconPath);
+            _appView.ExtractIconFromApp(iconPath);
         }
     }
 }

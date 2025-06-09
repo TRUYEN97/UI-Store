@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using UiStore.Common;
 using UiStore.Models;
@@ -12,50 +10,44 @@ namespace UiStore.Services
 {
     internal class AppModelManagement
     {
-        private readonly AppUnit _appUnit;
+        private readonly AppInfoModel _appInfoModel;
         private readonly AppStatusInfo _appStatus;
-        private readonly ProgramManagement _programManagement;
-        private AppModel appModel;
-        public AppModel CurrentAppModel { get; private set; }
-        public AppModel AppModelUse { get; set; }
-        public HashSet<FileModel> ToRemoveFiles {  get; private set; }
-
-        public AppModelManagement(AppUnit appUnit)
+        private AppModel AppModel { get; set; }
+        private AppModel AppModelUse { get; set; }
+        public HashSet<FileModel> ToRemoveFiles { get; set; }
+        public AppModel CurrentAppModel { get; set; }
+        public AppModelManagement(AppInfoModel appInfoModel, AppStatusInfo appStatusInfo)
         {
-            _appUnit = appUnit;
-            _appStatus = appUnit.AppStatusInfo;
-            _programManagement = appUnit.ProgramManagement;
+            _appInfoModel = appInfoModel;
+            _appStatus = appStatusInfo;
         }
 
-        internal async Task<bool> UpdateAppModel()
+        internal async Task<AppModel> GetAppModel()
         {
-            string appPath = _appUnit?.AppInfoModel?.AppPath;
+            string appPath = _appInfoModel?.AppPath;
             if (string.IsNullOrWhiteSpace(appPath))
             {
-                _programManagement.RemoveApp(_appUnit.AppView, CurrentAppModel);
-                return false;
-            }
-            appModel = await TranforUtil.GetModelConfig<AppModel>(appPath, ZIP_PASSWORD);
-            if (appModel == null)
-            {
-                _programManagement.RemoveApp(_appUnit.AppView, CurrentAppModel);
                 _appStatus.IsAppAvailable = false;
-                return false;
+                return null;
             }
-            CompareModel(appModel);
-            if (InitStorePathFor(appModel))
+            AppModel = await TranforUtil.GetModelConfig<AppModel>(appPath, ZIP_PASSWORD);
+            if (AppModel == null)
+            {
+                _appStatus.IsAppAvailable = false;
+                return null;
+            }
+            if (InitStorePathFor(AppModel))
             {
                 _appStatus.IsAppAvailable = true;
-                _appStatus.IsEnable = appModel.Enable && appModel.FileModels != null && appModel.FileModels.Count > 0;
-                _appStatus.IsCloseAndClear = appModel.CloseAndClear;
-                _appStatus.IsAutoRun = appModel.AutoOpen;
-                CurrentAppModel = appModel;
-                return true;
+                _appStatus.IsEnable = AppModel.Enable && AppModel.FileModels != null && AppModel.FileModels.Count > 0;
+                _appStatus.IsCloseAndClear = AppModel.CloseAndClear;
+                _appStatus.IsAutoRun = AppModel.AutoOpen;
+                return AppModel;
             }
-            return false;
+            return null;
         }
 
-        private void CompareModel(AppModel appModel)
+        internal bool IsModelChanged(AppModel appModel)
         {
             bool rs = false;
             if (!AppModelComparetor.CompareInfo(CurrentAppModel, appModel))
@@ -63,21 +55,22 @@ namespace UiStore.Services
                 rs = true;
             }
             ToRemoveFiles = AppModelComparetor.CompareFiles(AppModelUse, appModel);
-            _appStatus.HasNewVersion = rs || ToRemoveFiles.Count > 0;
+            return rs || ToRemoveFiles.Count > 0;
         }
 
         private bool InitStorePathFor(AppModel appModel)
         {
-            string rootFolderPath = _appUnit?.AppInfoModel.ProgramFolderPath;
+            string rootFolderPath = _appInfoModel.ProgramFolderPath;
+            string CommonFolderPath = _appInfoModel.CommonFolderPath;
             if (appModel == null || string.IsNullOrWhiteSpace(rootFolderPath))
             {
                 return false;
             }
             foreach (var file in appModel.FileModels)
             {
-                if(Util.ArePathsEqual(file.ProgramPath, appModel.MainPath))
+                if (Util.ArePathsEqual(file.ProgramPath, appModel.MainPath))
                 {
-                    appModel.AppIconPath = Path.Combine(_appUnit.AppInfoModel.IconDir, file.ProgramPath);
+                    appModel.AppIconPath = Path.Combine(_appInfoModel.IconDir, file.ProgramPath);
                     appModel.AppIconFileModel = file;
                 }
                 string storeFile = file.ProgramPath;
@@ -85,9 +78,19 @@ namespace UiStore.Services
                 {
                     storeFile = Path.Combine(rootFolderPath, file.ProgramPath);
                 }
+                file.ZipPath = Path.Combine(CommonFolderPath, Path.GetFileName(file.RemotePath));
                 file.StorePath = storeFile;
             }
             return true;
+        }
+
+        internal void UpdateCurrentModel()
+        {
+            CurrentAppModel = AppModel;
+        }
+        internal void UpdateUseModel()
+        {
+            AppModelUse = CurrentAppModel;
         }
     }
 }
