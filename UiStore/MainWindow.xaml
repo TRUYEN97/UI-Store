@@ -90,6 +90,8 @@
                                     <MenuItem Header="Open" Command="{Binding LaunchCommand}" />
                                     <MenuItem Header="Close" Command="{Binding CloseCommand}" />
                                     <MenuItem Header="Information" Command="{Binding ShowInfoCommand}" />
+                                    <MenuItem Header="Cancel update" Command="{Binding CancelAppUpdate}" />
+                                    <MenuItem Header="Cancel Extrack" Command="{Binding CancelExtrack}" />
                                 </ContextMenu>
                             </Border.ContextMenu>
                         </Border>

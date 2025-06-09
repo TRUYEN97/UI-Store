@@ -52,8 +52,7 @@ namespace UiStore.Services
         public bool IsEnable { get => this._appEvent.EnableStatus.Value; set { this._appEvent.EnableStatus.Value = value; } }
         public bool IsCloseAndClear { get; set; }
         public bool HasUpdate { get => this._appEvent.HasUpdate.Value; set { this._appEvent.HasUpdate.Value = value; } }
-        public bool IsRunnable => IsAppAvailable && IsEnable && !IsRunning && UpdateStatus == UpdateState.SUCCESS && ExtractStatus == ExtractState.SUCCESS && !HasNewVersion;
-        public bool IsExtractable => IsAppAvailable &&  IsEnable && UpdateStatus == UpdateState.SUCCESS && ExtractStatus != ExtractState.EXTRACTING && !HasNewVersion;
+        public bool IsRunnable => IsAppAvailable && IsEnable && !IsRunning && UpdateStatus == UpdateState.SUCCESS && ExtractStatus != ExtractState.EXTRACTING && !HasNewVersion;
         public bool IsUpdateAble => IsAppAvailable &&  UpdateStatus != UpdateState.UPDATING && ExtractStatus != ExtractState.EXTRACTING;
 
         internal void SetExtractDone()

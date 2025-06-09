@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UiStore.Common;
 using UiStore.Models;
@@ -14,6 +15,8 @@ namespace UiStore.Services
         private readonly CacheManager _cache;
         private readonly Logger _logger;
         private readonly InstanceWarehouse _instanceWarehouse;
+        private CancellationTokenSource _ctsUpdate;
+        private CancellationTokenSource _ctsExtact;
 
         private AppUnit AppUnit => _instanceWarehouse.AppUnit;
         private AppModel CurrentAppModel => AppModelManage.CurrentAppModel;
@@ -26,11 +29,17 @@ namespace UiStore.Services
             _logger = logger;
             _instanceWarehouse = instanceWarehouse;
         }
+        public void CancelUpdate()
+        {
+            _ctsUpdate?.Cancel();
+        }
 
         public async Task CheckUpdate()
         {
             try
             {
+                if (_ctsUpdate != null && !_ctsUpdate.Token.IsCancellationRequested) return;
+                _ctsUpdate = new CancellationTokenSource();
                 var appModel = await AppModelManage.GetAppModel();
                 if (appModel == null)
                 {
@@ -43,14 +52,14 @@ namespace UiStore.Services
                 AppStatus.SetUpdating();
                 try
                 {
-                    if (AppStatus.IsRunning)
+                    if (AppStatus.IsRunning && !_ctsUpdate.Token.IsCancellationRequested)
                     {
                         if (AppModelManage.IsModelChanged(appModel) || HasChangeProgramFiles(appModel))
                         {
                             AppStatus.HasNewVersion = true;
                         }
                     }
-                    if (!await UpdateWareHouse(appModel))
+                    if (!await UpdateWareHouse(appModel, _ctsUpdate.Token))
                     {
                         AppStatus.SetUpdateFailed();
                     }
@@ -68,9 +77,13 @@ namespace UiStore.Services
             {
                 _logger.AddLogLine(ex.Message);
             }
+            finally
+            {
+                CancelUpdate();
+            }
 
         }
-        private async Task<bool> UpdateWareHouse(AppModel app)
+        private async Task<bool> UpdateWareHouse(AppModel app, CancellationToken token)
         {
             int total = app.FileModels.Count;
             int done = 0;
@@ -78,7 +91,7 @@ namespace UiStore.Services
             List<FileModel> needToCheck = new List<FileModel>(app.FileModels);
             try
             {
-                while (needToCheck.Count > 0)
+                while (needToCheck.Count > 0 && !token.IsCancellationRequested)
                 {
                     checkedFiles.Clear();
                     foreach (var fileModel in needToCheck)
@@ -87,6 +100,10 @@ namespace UiStore.Services
                         {
                             AppStatus.Progress = (++done * 100) / total;
                             checkedFiles.Add(fileModel);
+                        }
+                        if (token.IsCancellationRequested)
+                        {
+                            break;
                         }
                     }
                     foreach (var fileModel in checkedFiles)
@@ -102,37 +119,54 @@ namespace UiStore.Services
                 return false;
             }
         }
-
-        public async Task<bool> CreateProgram()
+        public void CancelExtack()
         {
-            if (!AppStatus.IsExtractable || CurrentAppModel?.FileModels == null)
-            {
-                return false;
-            }
+            _ctsExtact?.Cancel();
+        }
+
+        private async Task<bool> ExtrackProgramFiles()
+        {
             try
             {
                 AppStatus.SetExtracting();
+                if (_ctsExtact != null && !_ctsExtact.Token.IsCancellationRequested) return false;
+                _ctsExtact = new CancellationTokenSource();
                 int total = CurrentAppModel.FileModels.Count;
                 int done = 0;
-                foreach (var file in CurrentAppModel.FileModels)
+                List<FileModel> extrackedFiles = new List<FileModel>();
+                List<FileModel> needToExtrack = new List<FileModel>(CurrentAppModel.FileModels);
+                while (needToExtrack.Count > 0 && !_ctsExtact.Token.IsCancellationRequested)
                 {
-                    if (!IsCheckSumPass(file.Md5, file.StorePath) && !await _cache.ExtractFileTo(file.Md5, file.StorePath))
+                    extrackedFiles.Clear();
+                    foreach (var file in needToExtrack)
                     {
-                        _logger.AddLogLine($"Extract failure! {file.ProgramPath}");
-                        AppStatus.SetExtractFailed();
-                        return false;
+                        if (!IsCheckSumPass(file.Md5, file.StorePath) && !await _cache.ExtractFileTo(file.Md5, file.StorePath))
+                        {
+                            _logger.AddLogLine($"Extract failure! {file.ProgramPath}");
+                            return false;
+                        }
+                        AppStatus.Progress = (++done * 100) / total;
+                        extrackedFiles.Add(file);
+                        if (_ctsExtact.Token.IsCancellationRequested)
+                        {
+                            break;
+                        }
                     }
-                    AppStatus.Progress = (++done * 100) / total;
+                    foreach (var fileModel in extrackedFiles)
+                    {
+                        needToExtrack.Remove(fileModel);
+                    }
                 }
-                AppStatus.SetExtractDone();
-                AppModelManage.UpdateUseModel();
-                return true;
+                return done == total;
             }
             catch (Exception ex)
             {
                 _logger.AddLogLine(ex.Message);
-                AppStatus.SetExtractFailed();
                 return false;
+            }
+            finally
+            {
+                CancelExtack();
             }
         }
 
@@ -162,7 +196,19 @@ namespace UiStore.Services
 
         private static bool IsCheckSumPass(string md5, string storePath)
         {
-            return File.Exists(storePath) && Util.GetMD5HashFromFile(storePath).Equals(md5);
+            if (File.Exists(storePath))
+            {
+                string fileMd5 = Util.GetMD5HashFromFile(storePath);
+                if (fileMd5 == md5)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return false;
         }
 
         private bool HasChangeProgramFiles(AppModel app)
@@ -181,15 +227,27 @@ namespace UiStore.Services
             return result;
         }
 
+        private readonly object _lock = new object();
         internal async Task Open()
         {
             try
             {
-                AppStatus.IsRunning = true;
-                if (await CreateProgram())
+                if (!AppStatus.IsRunnable || CurrentAppModel?.FileModels == null) return;
+                lock (_lock)
                 {
+                    if (!AppStatus.IsRunnable || CurrentAppModel?.FileModels == null) return;
+                }
+                AppStatus.IsRunning = true;
+                AppStatus.SetExtracting();
+                if (await ExtrackProgramFiles())
+                {
+                    AppStatus.SetExtractDone();
                     string cmd = $"cd \"{_instanceWarehouse.AppInfoModel.ProgramFolderPath}\" && {CurrentAppModel.OpenCmd}";
                     Util.RunCmd(cmd);
+                }
+                else
+                {
+                    AppStatus.SetExtractFailed();
                 }
             }
             catch (Exception ex)

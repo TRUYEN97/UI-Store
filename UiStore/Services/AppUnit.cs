@@ -20,11 +20,10 @@ namespace UiStore.Services
         private readonly AppEvent _appEvent;
         private readonly AppStatusInfo _appStatusInfo;
         private readonly AppInfoModel _appInfoModel;
-        private readonly AppAttack _updater;
+        private readonly AppAttack _appActtack;
         private readonly Authentication _authentication;
         private readonly Logger _logger;
         private CancellationTokenSource _cts;
-        private readonly object _lock;
 
         internal AppUnit(CacheManager cache, ProgramManagement programManagement, AppInfoModel appInfoModel, AppViewModel appView, Logger logger)
         {
@@ -37,12 +36,11 @@ namespace UiStore.Services
             _appStatusInfo = new AppStatusInfo(_appEvent);
             _appModelManagement = new AppModelManagement(appInfoModel, _appStatusInfo);
             _appStoreFileManagement = new AppStoreFileManagement(_appInfoModel, _appModelManagement);
-            _updater = new AppAttack(cache, _instanceWarehouse, logger);
+            _appActtack = new AppAttack(cache, _instanceWarehouse, logger);
             _authentication = new Authentication(logger)
             {
                 AccessUserListModelPath = _appInfoModel?.AccectUserPath
             };
-            _lock = new object();
             _instanceWarehouse.AppStatusInfo = _appStatusInfo;
             _instanceWarehouse.AppInfoModel = _appInfoModel;
             _instanceWarehouse.AppUnit = this;
@@ -65,25 +63,21 @@ namespace UiStore.Services
 
         public void LaunchApp()
         {
-            try
+            Task.Run(async () =>
             {
-                if (!_appStatusInfo.IsRunnable) return;
-                lock (_lock)
+                try
                 {
-                    if (!_appStatusInfo.IsRunnable) return;
-                    Task.Run(async () =>
+
+                    if (_appStatusInfo.IsRunnable &&  await _authentication.Login())
                     {
-                        if (await _authentication.Login() && _appStatusInfo.IsRunnable)
-                        {
-                            await _updater.Open();
-                        }
-                    });
+                        await _appActtack.Open();
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                _logger.AddLogLine(ex.Message);
-            }
+                catch (Exception ex)
+                {
+                    _logger.AddLogLine(ex.Message);
+                }
+            });
         }
 
         internal void StartUpdate()
@@ -98,7 +92,7 @@ namespace UiStore.Services
                     {
                         try
                         {
-                            await _updater.CheckUpdate();
+                            await _appActtack.CheckUpdate();
                             await Task.Delay(TimeSpan.FromSeconds(AutoDLConfig.ConfigModel.UpdateTime), _cts.Token);
                         }
                         catch (Exception ex)
@@ -119,6 +113,14 @@ namespace UiStore.Services
         internal void StopUpdate()
         {
             _cts?.Cancel();
+        }
+        internal void CancelAppUpdate()
+        {
+            _appActtack.CancelUpdate();
+        }
+        internal void CancelExtrack()
+        {
+            _appActtack.CancelExtack();
         }
 
         internal void ExtractIconFromApp(string iconPath)

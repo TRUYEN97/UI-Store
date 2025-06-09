@@ -30,6 +30,8 @@ namespace UiStore.ViewModel
         public ICommand LaunchCommand { get; }
         public ICommand CloseCommand { get; }
         public ICommand ShowInfoCommand { get; }
+        public ICommand CancelAppUpdate { get; }
+        public ICommand CancelExtrack { get; }
 
         public AppViewModel(CacheManager cache, ProgramManagement programManagement, AppInfoModel appInfoModel, Logger logger)
         {
@@ -41,6 +43,8 @@ namespace UiStore.ViewModel
             _iconSource = CreateSafeProperty<ImageSource>(nameof(IconSource));
             LaunchCommand = new RelayCommand(_ => _appUnit.LaunchApp());
             CloseCommand = new RelayCommand(_ => _appUnit.CloseApp());
+            CancelAppUpdate = new RelayCommand(_ => _appUnit.CancelAppUpdate());
+            CancelExtrack = new RelayCommand(_ => _appUnit.CancelExtrack());
             ShowInfoCommand = new RelayCommand(_ => ShowInfo());
         }
 

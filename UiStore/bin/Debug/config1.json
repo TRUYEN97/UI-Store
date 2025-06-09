@@ -1,0 +1,19 @@
+{
+  "SftpConfig": {
+    "Host": "127.0.0.1",
+    "Port": 4422,
+    "User": "user",
+    "Password": "ubnt"
+  },
+  "Location": {
+    "PcName": "UI-FT-00",
+    "Product": "UTPG3TM0T01",
+    "Station": "FT6",
+    "PcNumber": "00"
+  },
+  "CleaningApp": true,
+  "RemotePath": "/AutoDownload-store",
+  "AppLocalPath": "./Apps",
+  "CommonLocalPath": "./Common",
+  "UpdateTime": 5
+}

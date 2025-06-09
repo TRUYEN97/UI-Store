@@ -67,15 +67,13 @@ namespace UiStore.Services
                 {
                     cachedItem.Status = CacheItem.DlStatus.Extracting;
                     await ZipHelper.ExtractSingleFileWithPassword(cachedItem.Path, storePath, ZIP_PASSWORD);
+                    cachedItem.Status = CacheItem.DlStatus.DoNothing;
                 }
                 catch (Exception ex)
                 {
                     _logger.AddLogLine($"Unzip.Extract, {cachedItem} -> {storePath}: {ex.Message}");
+                    cachedItem.Status = CacheItem.DlStatus.Init;
                     return false;
-                }
-                finally
-                {
-                    cachedItem.Status = CacheItem.DlStatus.DoNothing;
                 }
                 try
                 {
@@ -87,6 +85,7 @@ namespace UiStore.Services
                 catch (Exception ex)
                 {
                     _logger.AddLogLine($"Unzip.checksum, {storePath}: {ex.Message}");
+                    cachedItem.Status = CacheItem.DlStatus.Init;
                     return false;
                 }
                 Remove(md5);
@@ -236,9 +235,7 @@ namespace UiStore.Services
             public DlStatus Status { get; set; }
             public bool Standby => Status == DlStatus.DoNothing && Exists();
 
-            public bool Init => Status == DlStatus.Init;
-
-            public bool CanUpdate => !Standby && Status != DlStatus.Loading;
+            public bool CanUpdate => Status == DlStatus.Init || (Status == DlStatus.DoNothing && !Exists());
             public void RemoveLink(string link)
             {
                 linked.Remove(link);
