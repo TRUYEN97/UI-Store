@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -13,7 +14,7 @@ namespace UiStore.Services
     internal class ProgramManagement
     {
         public ObservableCollection<AppViewModel> Applications { get; } = new ObservableCollection<AppViewModel>();
-        private readonly Dictionary<string, AppViewModel> _appBackgrounds = new Dictionary<string, AppViewModel>();
+        private readonly ConcurrentDictionary<string, AppViewModel> _appBackgrounds = new ConcurrentDictionary<string, AppViewModel>();
         private readonly CacheManager _cache;
         private readonly Logger _logger;
         public ProgramManagement(CacheManager cache, Logger logger)
@@ -44,7 +45,7 @@ namespace UiStore.Services
             DisableApp(appViewModel);
             if (_appBackgrounds.ContainsKey(appViewModel.Name))
             {
-                _appBackgrounds.Remove(appViewModel.Name);
+                _appBackgrounds.TryRemove(appViewModel.Name, out _);
                 _logger.AddLogLine($"Remove [{appViewModel.Name}]");
                 _cache.TryRemoveWith(appViewModel.Name);
             }
@@ -78,7 +79,7 @@ namespace UiStore.Services
             string name = app?.AppInfoModel?.Name;
             if (!string.IsNullOrEmpty(name) && !TryGetBackGroupApp(name, out _))
             {
-                _appBackgrounds.Add(name, app);
+                _appBackgrounds.TryAdd(name, app);
                 app.StartUpdate();
             }
         }
@@ -125,7 +126,7 @@ namespace UiStore.Services
             foreach (var app in toRemove)
             {
                 app.Value.StopUpdate();
-                _appBackgrounds.Remove(app.Key);
+                _appBackgrounds.TryRemove(app.Key, out _);
             }
         }
     }
