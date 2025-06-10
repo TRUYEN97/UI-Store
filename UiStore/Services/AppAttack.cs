@@ -75,7 +75,7 @@ namespace UiStore.Services
             }
             catch (Exception ex)
             {
-                _logger.AddLogLine(ex.Message);
+                _logger.AddLogLine($"CheckUpdate:{ex.Message}");
             }
             finally
             {
@@ -161,7 +161,7 @@ namespace UiStore.Services
             }
             catch (Exception ex)
             {
-                _logger.AddLogLine(ex.Message);
+                _logger.AddLogLine($"ExtrackProgramFiles:{ex.Message}");
                 return false;
             }
             finally
@@ -252,7 +252,7 @@ namespace UiStore.Services
             }
             catch (Exception ex)
             {
-                _logger.AddLogLine(ex.Message);
+                _logger.AddLogLine($"Open:{ex.Message}");
             }
             finally
             {

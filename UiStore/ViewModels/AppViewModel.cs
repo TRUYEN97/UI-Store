@@ -27,11 +27,11 @@ namespace UiStore.ViewModel
         private static readonly Brush UpdateFailedBrush = Brushes.Red;
         private static readonly Brush TransparentBrush = Brushes.Transparent;
         private readonly AppUnit _appUnit;
-        public ICommand LaunchCommand { get; }
-        public ICommand CloseCommand { get; }
-        public ICommand ShowInfoCommand { get; }
-        public ICommand CancelAppUpdate { get; }
-        public ICommand CancelExtrack { get; }
+        public RelayCommand LaunchCommand { get; }
+        public RelayCommand CloseCommand { get; }
+        public RelayCommand ShowInfoCommand { get; }
+        public RelayCommand CancelAppUpdate { get; }
+        public RelayCommand CancelExtrack { get; }
 
         public AppViewModel(CacheManager cache, ProgramManagement programManagement, AppInfoModel appInfoModel, Logger logger)
         {
@@ -41,12 +41,40 @@ namespace UiStore.ViewModel
             _statusBackgroundColor = CreateSafeProperty(nameof(StatusBackgroundColor), StandbyBrush);
             _runningBackgroundColor = CreateSafeProperty(nameof(RunningBackgroundColor), StandbyBrush);
             _iconSource = CreateSafeProperty<ImageSource>(nameof(IconSource));
-            LaunchCommand = new RelayCommand(_ => _appUnit.LaunchApp());
-            CloseCommand = new RelayCommand(_ => _appUnit.CloseApp());
-            CancelAppUpdate = new RelayCommand(_ => _appUnit.CancelAppUpdate());
-            CancelExtrack = new RelayCommand(_ => _appUnit.CancelExtrack());
-            ShowInfoCommand = new RelayCommand(_ => ShowInfo());
+
+            LaunchCommand = new RelayCommand(
+                _ => _appUnit.LaunchApp(),
+                _ => IsRunnable);
+
+            CloseCommand = new RelayCommand(
+                _ => _appUnit.CloseApp(),
+                _ => IsRunning);
+
+            CancelAppUpdate = new RelayCommand(
+                _ => _appUnit.CancelAppUpdate(),
+                _ => IsUpdating);
+
+            CancelExtrack = new RelayCommand(
+                _ => _appUnit.CancelExtrack(),
+                _ => IsExtracting);
+
+            ShowInfoCommand = new RelayCommand( _ => ShowInfo());
         }
+
+        public void RefreshAppInfo()
+        {
+            DispatcherHelper.RunOnUI(() => {
+                LaunchCommand.RaiseCanExecuteChanged();
+                CloseCommand.RaiseCanExecuteChanged();
+                CancelAppUpdate.RaiseCanExecuteChanged();
+                CancelExtrack.RaiseCanExecuteChanged();
+            });
+        }
+
+        public bool IsRunning => _appUnit?.InstanceWarehouse?.AppStatusInfo?.IsRunning == true;
+        public bool IsRunnable => _appUnit?.InstanceWarehouse?.AppStatusInfo?.IsRunnable == true;
+        public bool IsUpdating => _appUnit?.InstanceWarehouse?.AppStatusInfo?.IsUpdating == true;
+        public bool IsExtracting => _appUnit?.InstanceWarehouse?.AppStatusInfo?.IsExtracting == true;
 
         public void StartUpdate() => _appUnit.StartUpdate();
         public void StopUpdate() => _appUnit.StopUpdate();

@@ -21,6 +21,7 @@ namespace UiStore.Services
         private const string UPDATE_CURRENT_MODEL = "Update current model";
         private const string UPDATE_USE_MODEL = "Update use model";
         private const string REMOVE_NEW_VERSION_STATUS = "remove new version status";
+        private const string REFRESH_APP_INFO = "Refresh App Info";
         private const string SET_NEED_UPDATE = "Set Need Update status";
         private const string RESET_NEED_UPDATE = "Reset Need Update status";
         private readonly Logger _logger;
@@ -106,6 +107,10 @@ namespace UiStore.Services
                 (value, _) => AppModelManage.UpdateUseModel()));
 
             ExtractAction.Add(new RelayAction<ExtractState, AppEvent>(
+               REFRESH_APP_INFO,
+               (value, ins) => AppView.RefreshAppInfo()));
+
+            ExtractAction.Add(new RelayAction<ExtractState, AppEvent>(
                 SHOW_MESSAGE_LOG,
                 (status, _) =>
                 {
@@ -156,6 +161,10 @@ namespace UiStore.Services
                }));
 
             UpdateAction.Add(new RelayAction<UpdateState, AppEvent>(
+               REFRESH_APP_INFO,
+               (value, ins) => AppView.RefreshAppInfo()));
+
+            UpdateAction.Add(new RelayAction<UpdateState, AppEvent>(
                SHOW_MESSAGE_LOG,
                (status, _) => EnableStatus.Value,
                (status, ins) =>
@@ -181,6 +190,10 @@ namespace UiStore.Services
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                REMOVE_NEW_VERSION_STATUS,
                (value, ins) => HasUpdate.RunActions()));
+            
+            RunningStatus.Add(new RelayAction<bool, AppEvent>(
+               REFRESH_APP_INFO,
+               (value, ins) => AppView.RefreshAppInfo()));
 
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                SHOW_MESSAGE_LOG,

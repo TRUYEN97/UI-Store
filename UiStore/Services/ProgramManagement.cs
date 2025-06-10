@@ -86,15 +86,13 @@ namespace UiStore.Services
 
         private bool IsContainApp(AppViewModel appViewModel)
         {
-            foreach (var app in Applications)
+            return DispatcherHelper.RunOnUI(() =>
             {
-                if (app == appViewModel || app?.AppInfoModel?.AppPath == appViewModel?.AppInfoModel?.AppPath)
-                {
-                    return true;
-                }
-            }
-            return false;
+                return Applications.Any(app =>
+                    app == appViewModel || app?.AppInfoModel?.AppPath == appViewModel?.AppInfoModel?.AppPath);
+            });
         }
+
 
         private void CheckUpdateApps(Dictionary<string, ProgramPathModel> newConfigs)
         {
