@@ -76,6 +76,7 @@ namespace UiStore.Services
             catch (Exception ex)
             {
                 _logger.AddLogLine($"CheckUpdate:{ex.Message}");
+                AppStatus.SetUpdateFailed();
             }
             finally
             {

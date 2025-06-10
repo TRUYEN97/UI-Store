@@ -6,10 +6,8 @@
     "Password": "foxconn168!!"
   },
   "Location": {
-    "PcName": "UI-FT-00",
     "Product": "EOT",
-    "Station": "DOWNGRADE",
-    "PcNumber": "00"
+    "Station": "DOWNGRADE"
   },
   "CleaningApp": true,
   "RemotePath": "/AutoDownload-DOWNGRADE",

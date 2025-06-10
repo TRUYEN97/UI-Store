@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UiStore.Common;
-using UiStore.Models;
-
+﻿
 namespace UiStore.Services
 {
     internal class AppStatusInfo
@@ -57,6 +50,8 @@ namespace UiStore.Services
 
         public bool IsUpdating => UpdateStatus == UpdateState.UPDATING;
         public bool IsExtracting => ExtractStatus == ExtractState.EXTRACTING;
+
+        public bool IsStandby => !IsRunning && !IsUpdating && !IsExtracting;
 
         internal void SetExtractDone()
         {

@@ -1,4 +1,5 @@
-﻿using UiStore.Models;
+﻿using System;
+using UiStore.Models;
 using UiStore.ViewModel;
 using static UiStore.Services.AppStatusInfo;
 
@@ -24,7 +25,10 @@ namespace UiStore.Services
         private const string REFRESH_APP_INFO = "Refresh App Info";
         private const string SET_NEED_UPDATE = "Set Need Update status";
         private const string RESET_NEED_UPDATE = "Reset Need Update status";
+        private const string CLOSE_AND_CLEAR = "Close And Clear";
+        private const string CLEAR_REMOVER_APP_FILE_ACTION = "clear_remover_app_file_action";
         private readonly Logger _logger;
+
         public AppEvent(Logger logger, InstanceWarehouse instance)
         {
             _logger = logger;
@@ -190,7 +194,11 @@ namespace UiStore.Services
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                REMOVE_NEW_VERSION_STATUS,
                (value, ins) => HasUpdate.RunActions()));
-            
+
+            RunningStatus.Add(new RelayAction<bool, AppEvent>(
+               CLEAR_REMOVER_APP_FILE_ACTION,
+               (value, ins) => UpdateAction.ClearQueue()));
+
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                REFRESH_APP_INFO,
                (value, ins) => AppView.RefreshAppInfo()));
@@ -200,18 +208,44 @@ namespace UiStore.Services
                (value, ins) => { if (value) _logger.AddLogLine("Running..."); else _logger.AddLogLine("Stop run"); }));
 
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
-               CLEAR_STORE,
-               (value, ins) => !value,
-               (value, ins) => AppStoreFile.CleanStoreFileModel()));
+                CLEAR_STORE,
+                (value, ins) => !value,
+                (value, ins) =>
+                {
+                    if (AppStatusInfo.IsStandby)
+                    {
+                        AppStoreFile.CleanStoreFileModel();
+                    }
+                    else
+                    {
+                        UpdateAction.AddOneTimeAction(new RelayAction<UpdateState, AppEvent>(
+                            CLEAR_STORE,
+                            (_, o) => AppStatusInfo.IsStandby,
+                            (_, o) => AppStoreFile.CleanStoreFileModel()));
+                    }
+                }));
 
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                SHOW_RUNNING_STATUS,
                (value, ins) => AppView.SetRunning(value)));
 
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
-               "Close And Clear",
+               CLOSE_AND_CLEAR,
                (value, ins) => !value && AppStatusInfo.IsCloseAndClear,
-               (value, ins) => AppStoreFile.RemoveProgramFolder()));
+               (value, ins) =>
+               {
+                   if (AppStatusInfo.IsStandby)
+                   {
+                       AppStoreFile.RemoveProgramFolder();
+                   }
+                   else
+                   {
+                       UpdateAction.AddOneTimeAction(new RelayAction<UpdateState, AppEvent>(
+                           CLOSE_AND_CLEAR,
+                           (_, o) => AppStatusInfo.IsStandby,
+                           (_, o) => AppStoreFile.RemoveProgramFolder()));
+                   }
+               }));
             RunningStatus.Add(new RelayAction<bool, AppEvent>(
                AUTO_RUN_MODE,
                (value, ins) => AutoRunAction.RunActions()));

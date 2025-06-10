@@ -19,17 +19,29 @@ namespace UiStore.Services
             this.appModelManagement = appModelManagement;
         }
 
-        public void RemoveProgramFolder()
+        public bool RemoveProgramFolder()
         {
-            string dir = appInfoModel?.ProgramFolderPath;
-            if (!string.IsNullOrEmpty(dir))
+            try
             {
-                if (Directory.Exists(dir))
+                string dir = appInfoModel?.ProgramFolderPath;
+                if (!string.IsNullOrEmpty(dir))
                 {
-                    Directory.Delete(dir, true);
+                    if (Directory.Exists(dir))
+                    {
+                        Directory.Delete(dir, true);
+                    }
+                    return true;
                 }
+                return false;
             }
-            RemoveAppIcon();
+            catch (Exception)
+            {
+                return false;
+            }
+            finally
+            {
+                RemoveAppIcon();
+            }
         }
 
         internal void RemoveAppIcon()
@@ -44,18 +56,27 @@ namespace UiStore.Services
             }
         }
 
-        internal void CleanStoreFileModel()
+        internal bool CleanStoreFileModel()
         {
-            HashSet<FileModel> filesToRemove = appModelManagement.ToRemoveFiles;
-            if (filesToRemove != null)
+            try
             {
-                foreach (var fileModel in filesToRemove)
+                HashSet<FileModel> filesToRemove = appModelManagement.ToRemoveFiles;
+                if (filesToRemove != null)
                 {
-                    if (File.Exists(fileModel.StorePath))
+                    foreach (var fileModel in filesToRemove)
                     {
-                        File.Delete(fileModel.StorePath);
+                        if (File.Exists(fileModel.StorePath))
+                        {
+                            File.Delete(fileModel.StorePath);
+                        }
                     }
+                    return true;
                 }
+                return false;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
     }
