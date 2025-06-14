@@ -97,7 +97,7 @@ namespace UiStore.Services
                     checkedFiles.Clear();
                     foreach (var fileModel in needToCheck)
                     {
-                        if (await _cache.UpdateItem(fileModel))
+                        if (await _cache.UpdateItem(fileModel, app.Name))
                         {
                             AppStatus.Progress = (++done * 100) / total;
                             checkedFiles.Add(fileModel);

@@ -24,14 +24,11 @@ namespace UiStore.Configs
             RemotePath = "/AutoDownload";
             AppLocalPath = "./Apps";
             CommonLocalPath = "./Common";
-            CleaningApp = true;
             UpdateTime = 20;
         }
         public SftpConfig SftpConfig { get;  set; }
 
         public Location Location { get; set; }
-
-        public bool CleaningApp { get;  set; }
 
         public string RemotePath { get;  set; }
 

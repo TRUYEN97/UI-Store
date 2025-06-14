@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using Newtonsoft.Json.Linq;
 using UiStore.Common;
 using UiStore.Configs;
+using UiStore.Models;
 using UiStore.Services;
 using UiStore.ViewModels;
 
@@ -14,10 +16,10 @@ namespace UiStore.ViewModel
     internal class MainViewModel : BaseViewModel
     {
         public ObservableCollection<string> Ips { get; } = new ObservableCollection<string>();
-        public ObservableCollection<string> LogLines {  get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> LogLines { get; } = new ObservableCollection<string>();
         private readonly Location _location;
         private readonly Logger _mainLogger;
-        private readonly Authentication _authentication;
+        private readonly Authorization _authorization;
         private readonly ProgramManagement _programManagement;
         private readonly MyTimer _timer;
         private CancellationTokenSource _cts;
@@ -33,7 +35,7 @@ namespace UiStore.ViewModel
             var cache = new CacheManager(_mainLogger);
             cache.LoadFromFolder(AutoDLConfig.ConfigModel.CommonLocalPath);
             _programManagement = new ProgramManagement(cache, _mainLogger);
-            _authentication = new Authentication(_mainLogger, PathUtil.GetStationAccessUserPath(_location));
+            _authorization = new Authorization(_mainLogger, PathUtil.GetStationAccessUserPath(_location));
             Title = $"{ProgramInfo.ProductName} - V{ProgramInfo.ProductVersion}";
             _timer = new MyTimer((_) =>
             {
@@ -51,13 +53,45 @@ namespace UiStore.ViewModel
             _timer?.Start(0, 5000);
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
-            _ = Task.Run(() => LoopAsync(_cts.Token));
+            _ = Task.Run(async () =>
+            {
+                await CheckConnectServer(_cts.Token);
+                await CheckLogin(_cts.Token);
+                await LoopAsync(_cts.Token);
+            });
         }
 
         public void Stop()
         {
-            _cts?.Cancel(); 
+            _cts?.Cancel();
             _timer?.Stop();
+        }
+
+        private async Task CheckConnectServer(CancellationToken token)
+        {
+            while (!token.IsCancellationRequested && !_authorization.IsConnected)
+            {
+                try
+                {
+                    _mainLogger.AddLogLine("Connect to server failded!");
+                }
+                catch (Exception ex)
+                {
+                    _mainLogger.AddLogLine(ex.Message);
+                }
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
+            }
+        }
+
+        private async Task CheckLogin(CancellationToken token)
+        {
+            if (!token.IsCancellationRequested && !await _authorization.Login())
+            {
+                DispatcherHelper.RunOnUI(() =>
+                {
+                    Application.Current.Shutdown();
+                });
+            }
         }
 
         private async Task LoopAsync(CancellationToken token)
@@ -67,18 +101,8 @@ namespace UiStore.ViewModel
             {
                 try
                 {
-                    if (_authentication.IsAuthenticated || await _authentication.Login(true))
-                    {
-                        await SyncConfigAsync();
-                        await Task.Delay(TimeSpan.FromSeconds(updateTime), token);
-                    }
-                    else 
-                    {
-                        DispatcherHelper.RunOnUI(() =>
-                        {
-                            Application.Current.Shutdown();
-                        });
-                    }
+                    await SyncConfigAsync();
+                    await Task.Delay(TimeSpan.FromSeconds(updateTime), token);
                 }
                 catch (TaskCanceledException) { }
                 catch (Exception ex)
@@ -103,17 +127,26 @@ namespace UiStore.ViewModel
 
         private async Task SyncConfigAsync()
         {
-            var appList = (await TranforUtil.GetAppListModel(_location, ConstKey.ZIP_PASSWORD)).Item1;
-            if (appList?.ProgramPaths?.Count > 0)
+            try
             {
-                var newConfigs = appList.ProgramPaths.ToDictionary(elem => Util.GetAppName(_location, elem.Key), elm => elm.Value);
-                lock (_lock)
+                string appConfigRemotePath = PathUtil.GetAppConfigRemotePath(_location);
+                var appList = await TranforUtil.GetModelConfig<AppList>(appConfigRemotePath, ConstKey.ZIP_PASSWORD);
+                if (appList?.ProgramPaths?.Count > 0)
                 {
-                    _programManagement.UpdateApps(newConfigs);
+                    lock (_lock)
+                    {
+                        _programManagement.UpdateApps(appList.ProgramPaths);
+                    }
                 }
+            }
+            catch (ConnectFaildedException ex)
+            {
+                _mainLogger.AddLogLine(ex.Message);
+            }
+            catch (SftpFileNotFoundException ex)
+            {
+                _mainLogger.AddLogLine(ex.Message);
             }
         }
     }
-
-
 }

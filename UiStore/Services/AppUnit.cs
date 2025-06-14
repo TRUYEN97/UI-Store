@@ -21,7 +21,7 @@ namespace UiStore.Services
         private readonly AppStatusInfo _appStatusInfo;
         private readonly AppInfoModel _appInfoModel;
         private readonly AppAttack _appActtack;
-        private readonly Authentication _authentication;
+        private readonly Authorization _authentication;
         private readonly Logger _logger;
         private CancellationTokenSource _cts;
 
@@ -34,10 +34,10 @@ namespace UiStore.Services
             _instanceWarehouse = new InstanceWarehouse();
             _appEvent = new AppEvent(logger, _instanceWarehouse);
             _appStatusInfo = new AppStatusInfo(_appEvent);
-            _appModelManagement = new AppModelManagement(appInfoModel, _appStatusInfo);
+            _appModelManagement = new AppModelManagement(appInfoModel, _appStatusInfo, _logger);
             _appStoreFileManagement = new AppStoreFileManagement(_appInfoModel, _appModelManagement);
             _appActtack = new AppAttack(cache, _instanceWarehouse, logger);
-            _authentication = new Authentication(logger)
+            _authentication = new Authorization(logger)
             {
                 AccessUserListModelPath = _appInfoModel?.AccectUserPath
             };

@@ -2,32 +2,32 @@
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using UiStore.Common;
-using UiStore.Models;
 
 namespace UiStore.Services
 {
     internal class TranforUtil
     {
-        internal static async Task<(AppList, string)> GetAppListModel(Location location, string zipPassword)
+        public static bool IsConnected()
         {
-            string appConfigRemotePath = PathUtil.GetAppConfigRemotePath(location);
-            return (await GetModelConfig<AppList>(appConfigRemotePath, zipPassword), appConfigRemotePath);
+            using (var sftp = Util.GetSftpInstance())
+            {
+                return sftp.IsConnected;
+            }
         }
-
-        internal static async Task<T> GetModelConfig<T>(string path, string zipPassword)
+        public static async Task<T> GetModelConfig<T>(string path, string zipPassword)
         {
             using (var sftp = Util.GetSftpInstance())
             {
                 if (!await sftp.Connect())
                 {
                     string errorStr = "Connect to server failded!";
-                    throw new Exception(errorStr);
+                    throw new ConnectFaildedException(errorStr);
                 }
 
                 if (!await sftp.Exists(path))
                 {
                     string errorStr = $"Station invalid!";
-                    throw new Exception(errorStr);
+                    throw new SftpFileNotFoundException(errorStr);
                 }
 
                 try

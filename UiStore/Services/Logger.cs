@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Windows;
+using UiStore.Common;
 
 namespace UiStore.Services
 {
@@ -22,12 +23,12 @@ namespace UiStore.Services
 
         public void AddLogLine(string message)
         {
-            Application.Current.Dispatcher.Invoke(() =>
+            DispatcherHelper.RunOnUI(() =>
             {
-                logLines.Add($"{DateTime.Now:yyyy/MM/dd HH:mm:ss} [{name?.Trim()}] -> {message}");
-                while (logLines.Count > 10)
+                logLines?.Add($"{DateTime.Now:yyyy/MM/dd HH:mm:ss} [{name?.Trim()}] -> {message}");
+                while (logLines?.Count > 10)
                 {
-                    logLines.RemoveAt(0);
+                    logLines?.RemoveAt(0);
                 }
             });
         }

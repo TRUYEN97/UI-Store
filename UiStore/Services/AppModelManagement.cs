@@ -12,39 +12,57 @@ namespace UiStore.Services
     {
         private readonly AppInfoModel _appInfoModel;
         private readonly AppStatusInfo _appStatus;
+        private readonly Logger _logger;
         private AppModel AppModel { get; set; }
         private AppModel AppModelUse { get; set; }
         public HashSet<FileModel> ToRemoveFiles { get; set; }
         public AppModel CurrentAppModel { get; set; }
-        public AppModelManagement(AppInfoModel appInfoModel, AppStatusInfo appStatusInfo)
+        public AppModelManagement(AppInfoModel appInfoModel, AppStatusInfo appStatusInfo, Logger logger)
         {
             _appInfoModel = appInfoModel;
             _appStatus = appStatusInfo;
+            _logger = logger;
         }
 
         internal async Task<AppModel> GetAppModel()
         {
-            string appPath = _appInfoModel?.AppPath;
-            if (string.IsNullOrWhiteSpace(appPath))
+            try
             {
-                _appStatus.IsAppAvailable = false;
+                string appPath = _appInfoModel?.AppPath;
+                if (string.IsNullOrWhiteSpace(appPath))
+                {
+                    _appStatus.IsAppAvailable = false;
+                    return null;
+                }
+                AppModel = await TranforUtil.GetModelConfig<AppModel>(appPath, ZIP_PASSWORD);
+                if (AppModel == null)
+                {
+                    _appStatus.IsAppAvailable = false;
+                    _appStatus.IsEnable = false;
+                    return null;
+                }
+                if (InitStorePathFor(AppModel))
+                {
+                    _appStatus.IsAppAvailable = true;
+                    _appStatus.IsEnable = AppModel.Enable && AppModel.FileModels != null && AppModel.FileModels.Count > 0;
+                    _appStatus.IsCloseAndClear = AppModel.CloseAndClear;
+                    _appStatus.IsAutoRun = AppModel.AutoOpen;
+                    return AppModel;
+                }
                 return null;
             }
-            AppModel = await TranforUtil.GetModelConfig<AppModel>(appPath, ZIP_PASSWORD);
-            if (AppModel == null)
+            catch (ConnectFaildedException ex)
             {
-                _appStatus.IsAppAvailable = false;
+                _logger.AddLogLine(ex.Message);
                 return null;
             }
-            if (InitStorePathFor(AppModel))
+            catch (SftpFileNotFoundException ex)
             {
-                _appStatus.IsAppAvailable = true;
-                _appStatus.IsEnable = AppModel.Enable && AppModel.FileModels != null && AppModel.FileModels.Count > 0;
-                _appStatus.IsCloseAndClear = AppModel.CloseAndClear;
-                _appStatus.IsAutoRun = AppModel.AutoOpen;
-                return AppModel;
+                _appStatus.IsAppAvailable = false;
+                _appStatus.IsEnable = false;
+                _logger.AddLogLine(ex.Message);
+                return null;
             }
-            return null;
         }
 
         internal bool IsModelChanged(AppModel appModel)
@@ -66,6 +84,7 @@ namespace UiStore.Services
             {
                 return false;
             }
+            appModel.Name = _appInfoModel.Name;
             foreach (var file in appModel.FileModels)
             {
                 if (Util.ArePathsEqual(file.ProgramPath, appModel.MainPath))

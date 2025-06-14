@@ -6,11 +6,10 @@
     "Password": "foxconn168!!"
   },
   "Location": {
-    "Product": "EOT",
+    "Product": "SWITCH",
     "Station": "DOWNGRADE"
   },
-  "CleaningApp": true,
-  "RemotePath": "/AutoDownload-DOWNGRADE",
+  "RemotePath": "/AutoDownload/DOWNGRADE-SWITCH",
   "AppLocalPath": "D:/Apps",
   "CommonLocalPath": "D:/Common",
   "UpdateTime": 10

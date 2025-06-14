@@ -45,6 +45,7 @@ namespace UiStore.Services
             DisableApp(appViewModel);
             if (_appBackgrounds.ContainsKey(appViewModel.Name))
             {
+                appViewModel.StopUpdate();
                 _appBackgrounds.TryRemove(appViewModel.Name, out _);
                 _logger.AddLogLine($"Remove [{appViewModel.Name}]");
                 _cache.TryRemoveWith(appViewModel.Name);

@@ -157,7 +157,7 @@ namespace UiStore.Services
                (value, _) => value == UpdateState.SUCCESS && !HasNewVersion.Value && AppModelManage?.CurrentAppModel != null,
                (value, ins) =>
                {
-                   AppView.FWVersion = AppModelManage.CurrentAppModel?.FTUVersion;
+                   AppView.FWVersion = AppModelManage.CurrentAppModel?.FWSersion;
                    AppView.FCDVersion = AppModelManage.CurrentAppModel?.FCDVersion;
                    AppView.BOMVersion = AppModelManage.CurrentAppModel?.BOMVersion;
                    AppView.FTUVersion = AppModelManage.CurrentAppModel?.FTUVersion;
@@ -304,7 +304,6 @@ namespace UiStore.Services
               (value, ins) => !value && !RunningStatus.Value,
               (value, ins) =>
               {
-                  AppUnit.StopUpdate();
                   ProgramManagement.RemoveApp(AppView);
               }));
 

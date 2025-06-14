@@ -15,6 +15,21 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
     <ApplicationIcon>app.ico</ApplicationIcon>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -111,6 +126,8 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Behaviors\MouseDoubleClickBehavior.cs" />
+    <Compile Include="Common\ConnectFaildedException.cs" />
+    <Compile Include="Common\SftpFileNotFoundException.cs" />
     <Compile Include="Models\AppInfoModel.cs" />
     <Compile Include="Models\InstanceWarehouse.cs" />
     <Compile Include="Services\AppModelComparetor.cs" />
@@ -118,7 +135,7 @@
     <Compile Include="Services\AppEvent.cs" />
     <Compile Include="Services\AppStatusInfo.cs" />
     <Compile Include="Services\AppStoreFileManagement.cs" />
-    <Compile Include="Services\Authentication.cs" />
+    <Compile Include="Services\Authorization.cs" />
     <Compile Include="Common\ConstKey.cs" />
     <Compile Include="Common\ProgramInfo.cs" />
     <Compile Include="Common\SafeDispatcherProperty.cs" />
@@ -216,9 +233,25 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
   <ItemGroup>
     <Content Include="app.ico" />
+    <Resource Include="Resources\Cancel.png" />
+    <Resource Include="Resources\Close.png" />
+    <Resource Include="Resources\Properties.png" />
+    <Resource Include="Resources\Folder.png" />
+    <Resource Include="Resources\LaunchApp.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

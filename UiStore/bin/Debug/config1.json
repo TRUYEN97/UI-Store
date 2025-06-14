@@ -6,11 +6,11 @@
     "Password": "ubnt"
   },
   "Location": {
-    "Product": "UTPG3TM0T01",
-    "Station": "FT6"
+    "Product": "",
+    "Station": ""
   },
   "CleaningApp": true,
-  "RemotePath": "/AutoDownload-store",
+  "RemotePath": "/AutoDownload-EOT",
   "AppLocalPath": "./Apps",
   "CommonLocalPath": "./Common",
   "UpdateTime": 5

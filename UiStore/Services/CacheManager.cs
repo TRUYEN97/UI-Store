@@ -39,21 +39,6 @@ namespace UiStore.Services
             }
         }
 
-        public void RegisterLink(AppModel appModel)
-        {
-            if (appModel?.FileModels == null)
-            {
-                return;
-            }
-            foreach (var file in appModel?.FileModels)
-            {
-                if(TryGetPathByMd5(file.Md5, out var cachedItem))
-                {
-                    cachedItem.AddLink(file.StorePath);
-                }
-            }
-        }
-
 
         public async Task<bool> ExtractFileTo(string md5, string storePath)
         {
@@ -93,9 +78,10 @@ namespace UiStore.Services
             return false;
         }
 
-        public async Task<bool> UpdateItem(FileModel fileModel)
+        public async Task<bool> UpdateItem(FileModel fileModel, string appName)
         {
             var cacheItem = GetCacheItem(fileModel);
+            cacheItem.AddLink(appName);
             if (cacheItem.Standby)
             {
                 return true;
